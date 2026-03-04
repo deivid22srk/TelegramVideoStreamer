@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
+    id("kotlin-parcelize")
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -19,7 +21,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Telegram API credentials - substitua pelos seus valores obtidos em https://my.telegram.org
-        buildConfigField("int", "TELEGRAM_API_ID", "\"YOUR_API_ID\"")
+        buildConfigField("int", "TELEGRAM_API_ID", "0")
         buildConfigField("String", "TELEGRAM_API_HASH", "\"YOUR_API_HASH\"")
     }
 

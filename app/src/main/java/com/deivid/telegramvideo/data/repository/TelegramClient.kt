@@ -304,6 +304,20 @@ class TelegramClient @Inject constructor(
         }
 
     /**
+     * Obtém informações de um arquivo.
+     */
+    suspend fun getFile(fileId: Int): Result<TdApi.File> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.GetFile(fileId)) { result ->
+                when (result) {
+                    is TdApi.File -> continuation.resume(Result.success(result))
+                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
+                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                }
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    /**
      * Solicita o download de um arquivo.
      */
     fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> = callbackFlow {

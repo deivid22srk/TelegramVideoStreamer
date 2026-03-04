@@ -27,7 +27,7 @@ class SetupFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState: Bundle?)
+        super.onViewCreated(view, savedInstanceState)
 
         val prefs = requireContext().getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
         

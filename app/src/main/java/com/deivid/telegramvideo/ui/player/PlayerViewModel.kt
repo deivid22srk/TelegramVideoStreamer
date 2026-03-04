@@ -56,7 +56,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             // Obtém informações atualizadas do arquivo
-            val fileResult = repository.getVideoFile(video.fileId)
+            val fileResult = repository.getFile(video.fileId)
             fileResult.fold(
                 onSuccess = { file ->
                     when {
@@ -93,10 +93,11 @@ class PlayerViewModel @Inject constructor(
      * O TDLib suporta streaming nativo - o arquivo pode ser reproduzido
      * enquanto ainda está sendo baixado.
      */
-    private suspend fun startProgressiveDownload(fileId: Int) {
-        try {
-            repository.downloadFile(fileId).collect { file ->
-                when {
+    private fun startProgressiveDownload(fileId: Int) {
+        viewModelScope.launch {
+            try {
+                repository.downloadFile(fileId).collect { file ->
+                    when {
                     file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
                         _uiState.value = PlayerUiState.Ready(file.local.path)
                     }
@@ -118,11 +119,12 @@ class PlayerViewModel @Inject constructor(
                         }
                     }
                 }
+                }
+            } catch (e: Exception) {
+                _uiState.value = PlayerUiState.Error(
+                    e.message ?: "Erro durante o download do vídeo"
+                )
             }
-        } catch (e: Exception) {
-            _uiState.value = PlayerUiState.Error(
-                e.message ?: "Erro durante o download do vídeo"
-            )
         }
     }
 
