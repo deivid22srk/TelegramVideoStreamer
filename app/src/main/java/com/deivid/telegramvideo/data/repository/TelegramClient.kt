@@ -162,8 +162,8 @@ class TelegramClient @Inject constructor(
             this.apiHash = API_HASH
             this.systemLanguageCode = "pt-BR"
             this.deviceModel = android.os.Build.MODEL
+            this.systemVersion = android.os.Build.VERSION.RELEASE
             this.applicationVersion = "1.0.0"
-            this.enableStorageOptimizer = true
         }
 
         client?.send(parameters) { result ->
@@ -303,11 +303,12 @@ class TelegramClient @Inject constructor(
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
             val filter = TdApi.SearchMessagesFilterVideo()
-            client?.send(TdApi.SearchChatMessages(chatId, "", null, fromMessageId, 0, limit, filter, 0)) { result ->
+            val request = TdApi.SearchChatMessages(chatId, null, "", null, fromMessageId, 0, limit, filter)
+            client?.send(request) { result ->
                 when (result) {
-                    is TdApi.Messages -> continuation.resume(Result.success(result.messages.toList()))
+                    is TdApi.FoundChatMessages -> continuation.resume(Result.success(result.messages.toList()))
                     is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
-                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada: ${result.javaClass.simpleName}")))
                 }
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
