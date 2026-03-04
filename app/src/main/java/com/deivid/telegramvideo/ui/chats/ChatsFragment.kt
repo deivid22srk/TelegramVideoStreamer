@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.deivid.telegramvideo.R
 import com.deivid.telegramvideo.databinding.FragmentChatsBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,6 +34,7 @@ class ChatsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ChatsViewModel by viewModels()
+    private val args: ChatsFragmentArgs by navArgs()
     private lateinit var chatsAdapter: ChatsAdapter
 
     override fun onCreateView(
@@ -64,7 +66,8 @@ class ChatsFragment : Fragment() {
             // Navega para a tela de vídeos do chat selecionado
             val action = ChatsFragmentDirections.actionChatsFragmentToVideosFragment(
                 chatId = chat.id,
-                chatTitle = chat.title
+                chatTitle = chat.title,
+                isPicker = args.isPicker
             )
             findNavController().navigate(action)
         }

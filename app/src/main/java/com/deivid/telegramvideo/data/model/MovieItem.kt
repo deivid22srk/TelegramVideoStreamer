@@ -26,7 +26,8 @@ data class MovieItem(
     val fileSize: Long,
     val mimeType: String,
     val caption: String,
-    val date: Int
+    val date: Int,
+    val playbackPosition: Long = 0L
 ) : Parcelable {
 
     fun toVideoItem(): VideoItem {

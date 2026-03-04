@@ -93,7 +93,11 @@ class VideoModeFragment : Fragment() {
             context = requireContext(),
             video = movie.toVideoItem(),
             remoteFileId = movie.remoteFileId,
-            existingMovie = movie
+            existingMovie = movie,
+            onSelectVideo = {
+                val action = VideoModeFragmentDirections.actionVideoModeFragmentToChatsFragment(isPicker = true)
+                findNavController().navigate(action)
+            }
         ) { updatedMovie ->
             lifecycleScope.launch {
                 videoModeRepository.editMovie(updatedMovie)
@@ -102,9 +106,53 @@ class VideoModeFragment : Fragment() {
         }
     }
 
+    private fun observePickerResult() {
+        val savedStateHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        savedStateHandle?.getLiveData<com.deivid.telegramvideo.data.model.VideoItem>("selected_video")?.observe(viewLifecycleOwner) { video ->
+            val remoteId = savedStateHandle.get<String>("selected_remote_id")
+            if (video != null && remoteId != null) {
+                // Ao selecionar um vídeo do picker, abrimos o diálogo de adição/edição com os dados do vídeo
+                AddMovieDialog.show(
+                    context = requireContext(),
+                    video = video,
+                    remoteFileId = remoteId,
+                    onSelectVideo = {
+                        val action = VideoModeFragmentDirections.actionVideoModeFragmentToChatsFragment(isPicker = true)
+                        findNavController().navigate(action)
+                    }
+                ) { movie ->
+                    lifecycleScope.launch {
+                        videoModeRepository.addMovie(movie)
+                        Toast.makeText(requireContext(), "Adicionado!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                // Limpa o resultado para não disparar novamente
+                savedStateHandle.remove<com.deivid.telegramvideo.data.model.VideoItem>("selected_video")
+                savedStateHandle.remove<String>("selected_remote_id")
+            }
+        }
+    }
+
     private fun setupClickListeners() {
         binding.btnSelectStorage.setOnClickListener {
             showChatSelectionDialog()
+        }
+
+        binding.fabAdd.setOnClickListener {
+            AddMovieDialog.show(
+                context = requireContext(),
+                video = null,
+                remoteFileId = null,
+                onSelectVideo = {
+                    val action = VideoModeFragmentDirections.actionVideoModeFragmentToChatsFragment(isPicker = true)
+                    findNavController().navigate(action)
+                }
+            ) { movie ->
+                lifecycleScope.launch {
+                    videoModeRepository.addMovie(movie)
+                    Toast.makeText(requireContext(), "Adicionado!", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -113,18 +161,31 @@ class VideoModeFragment : Fragment() {
         setupRecyclerView()
         setupClickListeners()
         observeState()
+        observePickerResult()
 
         checkStorageAndLoad()
 
         // Listener para o menu de backup
         requireActivity().addMenuProvider(object : androidx.core.view.MenuProvider {
-            override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {}
+            override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {
+                menuInflater.inflate(R.menu.menu_chats, menu)
+                menu.findItem(R.id.action_search)?.isVisible = false
+                menu.findItem(R.id.action_video_mode)?.isVisible = false
+            }
             override fun onMenuItemSelected(menuItem: android.view.MenuItem): Boolean {
-                if (menuItem.itemId == R.id.action_backup) {
-                    performBackup()
-                    return true
+                return when (menuItem.itemId) {
+                    R.id.action_backup -> {
+                        performBackup()
+                        true
+                    }
+                    R.id.action_refresh -> {
+                        lifecycleScope.launch {
+                            videoModeRepository.restoreMovies()
+                        }
+                        true
+                    }
+                    else -> false
                 }
-                return false
             }
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }

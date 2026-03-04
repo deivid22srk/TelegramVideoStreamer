@@ -85,6 +85,11 @@
         android:label="@string/chats_title"
         tools:layout="@layout/fragment_chats">
 
+        <argument
+            android:name="isPicker"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
         <action
             android:id="@+id/action_chatsFragment_to_videosFragment"
             app:destination="@id/videosFragment"
@@ -149,6 +154,11 @@
             android:name="chatTitle"
             app:argType="string" />
 
+        <argument
+            android:name="isPicker"
+            android:defaultValue="false"
+            app:argType="boolean" />
+
         <action
             android:id="@+id/action_videosFragment_to_playerFragment"
             app:destination="@id/playerFragment"
@@ -178,6 +188,13 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_videoModeFragment_to_chatsFragment"
+            app:destination="@id/chatsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <!-- Tela do player de vídeo -->
@@ -194,6 +211,12 @@
         <argument
             android:name="chatTitle"
             app:argType="string" />
+
+        <argument
+            android:name="movieItem"
+            android:defaultValue="@null"
+            app:argType="com.deivid.telegramvideo.data.model.MovieItem"
+            app:nullable="true" />
     </fragment>
 
 </navigation>

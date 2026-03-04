@@ -16,12 +16,28 @@ object AddMovieDialog {
 
     fun show(
         context: Context,
-        video: VideoItem,
-        remoteFileId: String,
+        video: VideoItem?,
+        remoteFileId: String?,
         existingMovie: MovieItem? = null,
+        onSelectVideo: () -> Unit = {},
         onConfirm: (MovieItem) -> Unit
     ) {
         val binding = DialogAddMovieBinding.inflate(LayoutInflater.from(context))
+
+        var currentVideo = video
+        var currentRemoteFileId = remoteFileId
+
+        fun updateVideoUi() {
+            if (currentVideo != null) {
+                binding.tvSelectedVideo.isVisible = true
+                binding.tvSelectedVideo.text = "Vídeo: ${currentVideo?.fileName}"
+                if (binding.etTitle.text.isNullOrEmpty()) {
+                    binding.etTitle.setText(currentVideo?.fileName)
+                }
+            } else {
+                binding.tvSelectedVideo.isVisible = false
+            }
+        }
 
         if (existingMovie != null) {
             binding.etTitle.setText(existingMovie.title)
@@ -32,8 +48,14 @@ object AddMovieDialog {
             binding.etSeriesTitle.setText(existingMovie.seriesTitle)
             binding.etSeason.setText(existingMovie.season?.toString() ?: "")
             binding.etEpisode.setText(existingMovie.episode?.toString() ?: "")
-        } else {
+            updateVideoUi()
+        } else if (video != null) {
             binding.etTitle.setText(video.fileName)
+            updateVideoUi()
+        }
+
+        binding.btnSelectVideo.setOnClickListener {
+            onSelectVideo()
         }
 
         binding.cbIsSeries.setOnCheckedChangeListener { _, isChecked ->
@@ -49,6 +71,13 @@ object AddMovieDialog {
                 val coverUrl = binding.etCoverUrl.text.toString().takeIf { it.isNotEmpty() }
                 val isSeries = binding.cbIsSeries.isChecked
 
+                val v = currentVideo ?: existingMovie?.toVideoItem()
+                val rId = currentRemoteFileId ?: existingMovie?.remoteFileId
+
+                if (v == null || rId == null) {
+                    return@setPositiveButton
+                }
+
                 val movie = MovieItem(
                     id = existingMovie?.id ?: UUID.randomUUID().toString(),
                     messageId = existingMovie?.messageId ?: 0L,
@@ -59,15 +88,15 @@ object AddMovieDialog {
                     seriesTitle = binding.etSeriesTitle.text.toString().takeIf { isSeries },
                     season = binding.etSeason.text.toString().toIntOrNull().takeIf { isSeries },
                     episode = binding.etEpisode.text.toString().toIntOrNull().takeIf { isSeries },
-                    remoteFileId = remoteFileId,
-                    fileName = video.fileName,
-                    duration = video.duration,
-                    width = video.width,
-                    height = video.height,
-                    fileSize = video.fileSize,
-                    mimeType = video.mimeType,
-                    caption = video.caption,
-                    date = video.date
+                    remoteFileId = rId,
+                    fileName = v.fileName,
+                    duration = v.duration,
+                    width = v.width,
+                    height = v.height,
+                    fileSize = v.fileSize,
+                    mimeType = v.mimeType,
+                    caption = v.caption,
+                    date = v.date
                 )
                 onConfirm(movie)
             }

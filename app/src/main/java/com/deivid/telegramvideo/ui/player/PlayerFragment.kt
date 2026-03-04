@@ -32,6 +32,7 @@ import androidx.navigation.fragment.navArgs
 import com.deivid.telegramvideo.R
 import com.deivid.telegramvideo.data.player.TdLibDataSourceFactory
 import com.deivid.telegramvideo.data.repository.TelegramClient
+import com.deivid.telegramvideo.data.repository.VideoModeRepository
 import com.deivid.telegramvideo.databinding.FragmentPlayerBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -54,6 +55,9 @@ class PlayerFragment : Fragment() {
     @Inject
     lateinit var telegramClient: TelegramClient
 
+    @Inject
+    lateinit var videoModeRepository: VideoModeRepository
+
     private var player: ExoPlayer? = null
     private var playWhenReady = true
     private var currentPosition = 0L
@@ -75,6 +79,11 @@ class PlayerFragment : Fragment() {
         setupFullscreen()
         setupClickListeners()
         observeUiState()
+
+        // Restaura posição se for um MovieItem
+        args.movieItem?.let {
+            currentPosition = it.playbackPosition
+        }
 
         // Inicia a preparação do vídeo
         viewModel.prepareVideo(args.videoItem)
@@ -251,6 +260,14 @@ class PlayerFragment : Fragment() {
             playWhenReady = exoPlayer.playWhenReady
             currentPosition = exoPlayer.currentPosition
             playbackState = exoPlayer.playbackState
+
+            // Salva o progresso se for um MovieItem
+            args.movieItem?.let { movie ->
+                lifecycleScope.launch {
+                    videoModeRepository.editMovie(movie.copy(playbackPosition = currentPosition))
+                }
+            }
+
             exoPlayer.release()
             player = null
         }

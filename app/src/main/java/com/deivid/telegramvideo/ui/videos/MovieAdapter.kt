@@ -95,6 +95,16 @@ class MovieAdapter(
             binding.ivDownloaded.isVisible = false
             binding.btnDelete.isVisible = true
             binding.btnDelete.setOnClickListener { onMovieDelete(movie) }
+
+            // Progresso de reprodução
+            val progressIndicator = binding.root.findViewById<com.google.android.material.progressindicator.LinearProgressIndicator>(R.id.playbackProgress)
+            if (movie.playbackPosition > 0 && movie.duration > 0) {
+                progressIndicator?.isVisible = true
+                val progressPercent = (movie.playbackPosition * 100 / (movie.duration * 1000L)).toInt()
+                progressIndicator?.progress = progressPercent.coerceIn(0, 100)
+            } else {
+                progressIndicator?.isVisible = false
+            }
             binding.root.setOnClickListener { onMovieClick(movie) }
             binding.root.setOnLongClickListener {
                 onMovieEdit(movie)

@@ -118,15 +118,30 @@ class VideosFragment : Fragment() {
     private fun setupRecyclerView() {
         videosAdapter = VideosAdapter(
             onVideoClick = { video ->
-                // Navega para o player ao clicar em um vídeo
-                val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
-                    videoItem = video,
-                    chatTitle = args.chatTitle
-                )
-                findNavController().navigate(action)
+                if (args.isPicker) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val remoteFileId = viewModel.getRemoteFileId(video)
+                        if (remoteFileId != null) {
+                            findNavController().previousBackStackEntry?.savedStateHandle?.set("selected_video", video)
+                            findNavController().previousBackStackEntry?.savedStateHandle?.set("selected_remote_id", remoteFileId)
+                            findNavController().popBackStack(R.id.videoModeFragment, false)
+                        } else {
+                            Toast.makeText(requireContext(), "Erro ao obter ID do arquivo", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    // Navega para o player ao clicar em um vídeo
+                    val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                        videoItem = video,
+                        chatTitle = args.chatTitle
+                    )
+                    findNavController().navigate(action)
+                }
             },
             onVideoLongClick = { video ->
-                showAddToVideoModeDialog(video)
+                if (!args.isPicker) {
+                    showAddToVideoModeDialog(video)
+                }
             },
             onSelectionChanged = { count ->
                 requireActivity().invalidateOptionsMenu()

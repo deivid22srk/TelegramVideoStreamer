@@ -68,7 +68,8 @@ class MovieDetailsFragment : Fragment() {
         binding.btnWatchNow.setOnClickListener {
             val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToPlayerFragment(
                 videoItem = movie.toVideoItem(),
-                chatTitle = movie.title
+                chatTitle = args.movieItem.title,
+                movieItem = args.movieItem
             )
             findNavController().navigate(action)
         }
@@ -106,24 +107,22 @@ class MovieDetailsFragment : Fragment() {
     private fun observeEpisodes(movie: MovieItem) {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Aqui observamos a lista completa do repositório via o viewmodel de VideoMode
-                // Como não queremos criar um novo ViewModel só para detalhes agora, aproveitamos o existente
-                // Idealmente teríamos um EpisodeViewModel
-                viewModel.libraryItems.collect { items ->
+                viewModel.allMovies.collect { movies ->
                     val seriesTitle = movie.seriesTitle ?: movie.title
-                    allSeriesEpisodes = (requireActivity() as com.deivid.telegramvideo.ui.MainActivity)
-                        .let {
-                             // Vamos precisar de acesso aos filmes brutos no ViewModel ou Repositório
-                             // Por simplicidade para o MVP, vamos filtrar do que temos no ViewModel
-                             items.filterIsInstance<VideoLibraryItem.Movie>()
-                                 .map { it.movie }
-                                 .filter { it.seriesTitle == seriesTitle || it.title == seriesTitle }
-                        }
+                    allSeriesEpisodes = movies.filter { it.seriesTitle == seriesTitle || it.title == seriesTitle }
 
                     setupTabs(allSeriesEpisodes)
-                    val currentSeason = movie.season ?: 1
-                    binding.tabLayoutSeasons.getTabAt(currentSeason - 1)?.select()
-                    updateEpisodesList(currentSeason)
+                    if (allSeriesEpisodes.isNotEmpty()) {
+                        val currentSeason = movie.season ?: 1
+                        val tab = binding.tabLayoutSeasons.getTabAt(currentSeason - 1)
+                        if (tab != null) {
+                            tab.select()
+                            updateEpisodesList(currentSeason)
+                        } else {
+                            binding.tabLayoutSeasons.getTabAt(0)?.select()
+                            updateEpisodesList(1)
+                        }
+                    }
                 }
             }
         }

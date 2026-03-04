@@ -27,6 +27,8 @@ class VideoModeViewModel @Inject constructor(
     private val _libraryItems = MutableStateFlow<List<VideoLibraryItem>>(emptyList())
     val libraryItems: StateFlow<List<VideoLibraryItem>> = _libraryItems.asStateFlow()
 
+    val allMovies = videoModeRepository.movies
+
     init {
         viewModelScope.launch {
             videoModeRepository.movies.collect { movies ->
