@@ -91,6 +91,10 @@ class ChatsFragment : Fragment() {
                         viewModel.loadChats()
                         true
                     }
+                    R.id.action_video_mode -> {
+                        navigateToVideoMode()
+                        true
+                    }
                     else -> false
                 }
             }
@@ -151,6 +155,10 @@ class ChatsFragment : Fragment() {
 
     private fun navigateToLogin() {
         findNavController().navigate(R.id.action_chatsFragment_to_loginFragment)
+    }
+
+    private fun navigateToVideoMode() {
+        findNavController().navigate(R.id.action_chatsFragment_to_videoModeFragment)
     }
 
     override fun onDestroyView() {

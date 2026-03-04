@@ -98,6 +98,14 @@
             app:destination="@id/loginFragment"
             app:popUpTo="@id/chatsFragment"
             app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_chatsFragment_to_videoModeFragment"
+            app:destination="@id/videoModeFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <!-- Tela de vídeos de um chat -->
@@ -138,6 +146,39 @@
         <argument
             android:name="chatTitle"
             app:argType="string" />
+    </fragment>
+
+    <!-- Tela do Modo Vídeo (filmes e séries) -->
+    <fragment
+        android:id="@+id/videoModeFragment"
+        android:name="com.deivid.telegramvideo.ui.videomode.VideoModeFragment"
+        android:label="Modo Vídeo"
+        tools:layout="@layout/fragment_video_mode">
+        <action
+            android:id="@+id/action_videoModeFragment_to_movieDetailFragment"
+            app:destination="@id/movieDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <!-- Tela de detalhes de um filme/série -->
+    <fragment
+        android:id="@+id/movieDetailFragment"
+        android:name="com.deivid.telegramvideo.ui.videomode.MovieDetailFragment"
+        android:label="Detalhes"
+        tools:layout="@layout/fragment_movie_detail">
+        <argument
+            android:name="movieId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_movieDetailFragment_to_playerFragment"
+            app:destination="@id/playerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
 </navigation>

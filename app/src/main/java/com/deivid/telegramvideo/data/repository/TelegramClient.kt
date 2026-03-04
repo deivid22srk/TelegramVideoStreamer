@@ -367,6 +367,53 @@ class TelegramClient @Inject constructor(
             }
 
     /**
+     * Envia uma mensagem de texto para um chat.
+     * Usado para salvar dados do Modo Vídeo em um grupo.
+     */
+    suspend fun sendTextMessage(chatId: Long, text: String): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            val formattedText = TdApi.FormattedText(text, emptyArray())
+            val content = TdApi.InputMessageText(formattedText, null, false)
+            val request = TdApi.SendMessage(chatId, 0, null, null, null, content)
+            client?.send(request) { result ->
+                when (result) {
+                    is TdApi.Message -> continuation.resume(Result.success(Unit))
+                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
+                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                }
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    /**
+     * Busca a mensagem de texto mais recente contendo uma determinada string em um chat.
+     * Usado para restaurar dados do Modo Vídeo.
+     */
+    suspend fun searchTextMessage(chatId: Long, query: String): Result<String> =
+        suspendCancellableCoroutine { continuation ->
+            val filter = TdApi.SearchMessagesFilterEmpty()
+            val request = TdApi.SearchChatMessages(chatId, query, "", null, 0, 0, 1, filter)
+            client?.send(request) { result ->
+                when (result) {
+                    is TdApi.FoundChatMessages -> {
+                        val message = result.messages.firstOrNull()
+                        if (message != null) {
+                            val text = (message.content as? TdApi.MessageText)?.text?.text
+                            if (text != null) {
+                                continuation.resume(Result.success(text))
+                            } else {
+                                continuation.resume(Result.failure(Exception("Mensagem não contém texto")))
+                            }
+                        } else {
+                            continuation.resume(Result.failure(Exception("Nenhuma mensagem encontrada")))
+                        }
+                    }
+                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
+                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                }
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    /**
      * Encerra a sessão do usuário.
      */
     suspend fun logout(): Result<Unit> = suspendCancellableCoroutine { continuation ->

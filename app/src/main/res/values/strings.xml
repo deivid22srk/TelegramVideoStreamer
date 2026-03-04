@@ -44,4 +44,19 @@
     <string name="retry">Tentar novamente</string>
     <string name="download">Baixar</string>
     <string name="share">Compartilhar</string>
+
+    <!-- Modo Vídeo -->
+    <string name="video_mode_title">Modo Vídeo</string>
+    <string name="video_mode_movies">Filmes</string>
+    <string name="video_mode_series">Séries</string>
+    <string name="video_mode_add">Adicionar ao Modo Vídeo</string>
+    <string name="video_mode_no_movies">Nenhum filme adicionado.\nSegure sobre um vídeo para adicionar.</string>
+    <string name="video_mode_no_series">Nenhuma série adicionada.\nSegure sobre um vídeo para adicionar.</string>
+    <string name="video_mode_save_success">Dados salvos com sucesso no Telegram!</string>
+    <string name="video_mode_restore_success">Dados restaurados com sucesso!</string>
+    <string name="video_mode_create">Criar Modo Filme</string>
+    <string name="video_mode_restore">Restaurar Dados do Modo Filme</string>
+    <string name="video_mode_manage">Gerenciar</string>
+    <string name="video_mode_select_group_save">Selecione o grupo onde os dados serão salvos</string>
+    <string name="video_mode_select_group_restore">Selecione o grupo de onde os dados serão restaurados</string>
 </resources>

@@ -15,7 +15,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.deivid.telegramvideo.data.model.VideoItem
 import com.deivid.telegramvideo.databinding.FragmentVideosBinding
+import com.deivid.telegramvideo.ui.videomode.AddToVideoModeDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -55,14 +58,21 @@ class VideosFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        videosAdapter = VideosAdapter { video ->
-            // Navega para o player ao clicar em um vídeo
-            val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
-                videoItem = video,
-                chatTitle = args.chatTitle
-            )
-            findNavController().navigate(action)
-        }
+        videosAdapter = VideosAdapter(
+            onVideoClick = { video ->
+                // Navega para o player ao clicar em um vídeo
+                val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                    videoItem = video,
+                    chatTitle = args.chatTitle
+                )
+                findNavController().navigate(action)
+            },
+            onVideoLongClick = { video ->
+                // Exibe menu de contexto ao segurar sobre um vídeo
+                showVideoContextMenu(video)
+                true
+            }
+        )
 
         val gridLayoutManager = GridLayoutManager(requireContext(), 2)
         binding.recyclerViewVideos.layoutManager = gridLayoutManager
@@ -77,6 +87,37 @@ class VideosFragment : Fragment() {
                 }
             }
         })
+    }
+
+    /**
+     * Exibe o menu de contexto ao segurar sobre um vídeo.
+     * Oferece a opção de adicionar ao Modo Vídeo.
+     */
+    private fun showVideoContextMenu(video: VideoItem) {
+        val options = arrayOf("Adicionar ao Modo Vídeo", "Reproduzir")
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(video.caption.ifEmpty { "Opções do vídeo" })
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showAddToVideoModeDialog(video)
+                    1 -> {
+                        val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                            videoItem = video,
+                            chatTitle = args.chatTitle
+                        )
+                        findNavController().navigate(action)
+                    }
+                }
+            }
+            .show()
+    }
+
+    /**
+     * Abre o diálogo para adicionar o vídeo ao Modo Vídeo.
+     */
+    private fun showAddToVideoModeDialog(video: VideoItem) {
+        val dialog = AddToVideoModeDialog.newInstance(video)
+        dialog.show(childFragmentManager, "add_to_video_mode")
     }
 
     private fun setupSwipeRefresh() {

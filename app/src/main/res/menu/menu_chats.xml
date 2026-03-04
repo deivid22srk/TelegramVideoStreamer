@@ -10,10 +10,16 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
     <item
+        android:id="@+id/action_video_mode"
+        android:title="Modo Vídeo"
+        android:icon="@drawable/ic_play_circle"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_refresh"
         android:title="Atualizar"
         android:icon="@drawable/ic_refresh"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/action_logout"

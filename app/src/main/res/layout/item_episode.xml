@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Número do episódio -->
+    <TextView
+        android:id="@+id/tvEpisodeNumber"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:gravity="center"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="@color/telegram_blue"
+        android:background="@drawable/bg_duration"
+        android:layout_marginEnd="12dp" />
+
+    <!-- Informações do episódio -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvEpisodeTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/on_surface"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tvEpisodeDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/on_surface_secondary" />
+
+    </LinearLayout>
+
+    <!-- Ícone de play -->
+    <ImageView
+        android:id="@+id/ivPlay"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_play_circle"
+        android:contentDescription="Reproduzir episódio"
+        android:tint="@color/telegram_blue" />
+
+</LinearLayout>

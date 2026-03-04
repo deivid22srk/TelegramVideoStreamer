@@ -3,6 +3,7 @@ package com.deivid.telegramvideo.di
 import android.content.Context
 import com.deivid.telegramvideo.data.repository.TelegramClient
 import com.deivid.telegramvideo.data.repository.TelegramRepository
+import com.deivid.telegramvideo.data.repository.VideoModeRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,4 +29,11 @@ object AppModule {
     fun provideTelegramRepository(
         telegramClient: TelegramClient
     ): TelegramRepository = TelegramRepository(telegramClient)
+
+    @Provides
+    @Singleton
+    fun provideVideoModeRepository(
+        @ApplicationContext context: Context,
+        telegramClient: TelegramClient
+    ): VideoModeRepository = VideoModeRepository(context, telegramClient)
 }
