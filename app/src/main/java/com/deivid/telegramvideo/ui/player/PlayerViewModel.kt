@@ -20,7 +20,7 @@ import javax.inject.Inject
 sealed class PlayerUiState {
     object Idle : PlayerUiState()
     object Preparing : PlayerUiState()
-    data class Ready(val localPath: String) : PlayerUiState()
+    data class Ready(val localPath: String, val fileId: Int = 0, val fileSize: Long = 0) : PlayerUiState()
     data class Downloading(val progress: Int) : PlayerUiState()
     data class Error(val message: String) : PlayerUiState()
 }
@@ -70,7 +70,7 @@ class PlayerViewModel @Inject constructor(
                     when {
                         file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
                             // Arquivo já baixado
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
+                            _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
                         }
                         file.local.isDownloadingActive -> {
                             // Download em andamento - monitora o progresso
@@ -114,14 +114,14 @@ class PlayerViewModel @Inject constructor(
                         file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
                             if (!isReadySent) {
                                 isReadySent = true
-                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
                             }
                         }
                         file.local.isDownloadingActive -> {
                             // Inicia a reprodução assim que tiver dados iniciais (>= 1%)
                             if (progress >= 1 && file.local.path.isNotEmpty() && !isReadySent) {
                                 isReadySent = true
-                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
                             } else if (!isReadySent) {
                                 _uiState.value = PlayerUiState.Downloading(progress)
                             }
@@ -129,7 +129,7 @@ class PlayerViewModel @Inject constructor(
                         else -> {
                             if (file.local.path.isNotEmpty() && !isReadySent) {
                                 isReadySent = true
-                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
                             }
                         }
                     }

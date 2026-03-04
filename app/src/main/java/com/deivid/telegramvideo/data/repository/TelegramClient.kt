@@ -291,4 +291,15 @@ class TelegramClient @Inject constructor(
             else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro no logout")))
         } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
     }
+
+    suspend fun readFilePart(fileId: Int, offset: Long, count: Long): Result<TdApi.Object> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.ReadFilePart(fileId, offset, count)) { result ->
+                if (result is TdApi.Error) {
+                    continuation.resume(Result.failure(Exception(result.message)))
+                } else {
+                    continuation.resume(Result.success(result))
+                }
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
 }

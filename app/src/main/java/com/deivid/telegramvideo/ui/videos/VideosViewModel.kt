@@ -40,6 +40,7 @@ class VideosViewModel @Inject constructor(
     private var allVideos: MutableList<VideoItem> = mutableListOf()
     private var lastMessageId: Long = 0
     private var isLoadingMore = false
+    private var currentQuery = ""
 
     /**
      * Carrega os vídeos de um chat específico.
@@ -59,6 +60,9 @@ class VideosViewModel @Inject constructor(
      */
     fun loadMoreVideos() {
         if (isLoadingMore || lastMessageId == 0L) return
+        // Don't load more if we are filtering, to avoid confusion
+        if (currentQuery.isNotEmpty()) return
+
         viewModelScope.launch {
             isLoadingMore = true
             fetchVideos()
@@ -73,7 +77,7 @@ class VideosViewModel @Inject constructor(
                 if (videos.isNotEmpty()) {
                     lastMessageId = videos.last().messageId
                     allVideos.addAll(videos)
-                    _uiState.value = VideosUiState.Success(allVideos.toList())
+                    updateUiWithFilter()
                 } else if (allVideos.isEmpty()) {
                     _uiState.value = VideosUiState.Empty
                 }
@@ -93,6 +97,36 @@ class VideosViewModel @Inject constructor(
      */
     fun refresh() {
         loadVideos(currentChatId)
+    }
+
+    /**
+     * Filtra os vídeos por texto.
+     */
+    fun filterVideos(query: String) {
+        currentQuery = query
+        updateUiWithFilter()
+    }
+
+    private fun updateUiWithFilter() {
+        if (currentQuery.isBlank()) {
+            if (allVideos.isEmpty() && _uiState.value is VideosUiState.Success) {
+                _uiState.value = VideosUiState.Empty
+            } else if (allVideos.isNotEmpty()) {
+                _uiState.value = VideosUiState.Success(allVideos.toList())
+            }
+            return
+        }
+
+        val filtered = allVideos.filter { video ->
+            video.fileName.contains(currentQuery, ignoreCase = true) ||
+            video.caption.contains(currentQuery, ignoreCase = true)
+        }
+
+        if (filtered.isEmpty()) {
+            _uiState.value = VideosUiState.Empty
+        } else {
+            _uiState.value = VideosUiState.Success(filtered)
+        }
     }
 
     /**
