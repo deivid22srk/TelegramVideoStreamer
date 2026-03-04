@@ -4,12 +4,22 @@ import android.content.Context
 import android.util.Log
 import com.deivid.telegramvideo.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
@@ -63,6 +73,11 @@ class TelegramClient @Inject constructor(
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
+    private val _updates = MutableSharedFlow<TdApi.Object>(extraBufferCapacity = 100)
+    val updates = _updates.asSharedFlow()
+
+    private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     init {
         loadCredentials()
         initializeClient()
@@ -100,6 +115,9 @@ class TelegramClient @Inject constructor(
      * Processa as atualizações recebidas do TDLib.
      */
     private fun handleUpdate(update: TdApi.Object) {
+        clientScope.launch {
+            _updates.emit(update)
+        }
         when (update) {
             is TdApi.UpdateAuthorizationState -> {
                 handleAuthorizationState(update.authorizationState)
@@ -156,6 +174,8 @@ class TelegramClient @Inject constructor(
         val parameters = TdApi.SetTdlibParameters().apply {
             this.databaseDirectory = databaseDir
             this.filesDirectory = filesDir
+            this.useFileDatabase = true
+            this.useChatInfoDatabase = true
             this.useMessageDatabase = true
             this.useSecretChats = false
             this.apiId = API_ID
@@ -330,28 +350,21 @@ class TelegramClient @Inject constructor(
     /**
      * Solicita o download de um arquivo.
      */
-    fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> = callbackFlow {
-        client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) { result ->
-            if (result is TdApi.Error) {
-                close(Exception(result.message))
-            }
-        }
+    fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> =
+        updates.filterIsInstance<TdApi.UpdateFile>()
+            .filter { it.file.id == fileId }
+            .map { it.file }
+            .onStart {
+                // Emite o estado inicial do arquivo
+                getFile(fileId).getOrNull()?.let { emit(it) }
 
-        val listener = { update: TdApi.Object ->
-            if (update is TdApi.UpdateFile) {
-                if (update.file.id == fileId) {
-                    trySend(update.file)
-                    if (update.file.local.isDownloadingCompleted) {
-                        close()
+                // Inicia o download
+                client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) { result ->
+                    if (result is TdApi.Error) {
+                        Log.e(TAG, "Error downloading file $fileId: ${result.message}")
                     }
                 }
             }
-        }
-
-        // Nota: Em uma implementação real, precisaríamos registrar esse listener no handleUpdate
-        // Para simplificar aqui, estamos apenas iniciando o download.
-        awaitClose { /* Remover listener se necessário */ }
-    }
 
     /**
      * Encerra a sessão do usuário.

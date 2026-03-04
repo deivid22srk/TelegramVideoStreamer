@@ -38,6 +38,7 @@ class PlayerViewModel @Inject constructor(
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var currentVideo: VideoItem? = null
+    private var isReadySent = false
 
     /**
      * Prepara o vídeo para reprodução.
@@ -94,31 +95,37 @@ class PlayerViewModel @Inject constructor(
      * enquanto ainda está sendo baixado.
      */
     private fun startProgressiveDownload(fileId: Int) {
+        isReadySent = false
         viewModelScope.launch {
             try {
                 repository.downloadFile(fileId).collect { file ->
-                    when {
-                    file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
-                        _uiState.value = PlayerUiState.Ready(file.local.path)
-                    }
-                    file.local.isDownloadingActive -> {
-                        val progress = if (file.size > 0) {
-                            ((file.local.downloadedSize * 100) / file.size).toInt()
-                        } else 0
+                    val progress = if (file.size > 0) {
+                        ((file.local.downloadedSize * 100) / file.size).toInt()
+                    } else 0
 
-                        // Inicia a reprodução assim que tiver dados suficientes (>5%)
-                        if (progress >= 5 && file.local.path.isNotEmpty()) {
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
-                        } else {
-                            _uiState.value = PlayerUiState.Downloading(progress)
+                    when {
+                        file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
+                            if (!isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                            }
+                        }
+                        file.local.isDownloadingActive -> {
+                            // Inicia a reprodução assim que tiver dados iniciais (>= 1%)
+                            if (progress >= 1 && file.local.path.isNotEmpty() && !isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                            } else if (!isReadySent) {
+                                _uiState.value = PlayerUiState.Downloading(progress)
+                            }
+                        }
+                        else -> {
+                            if (file.local.path.isNotEmpty() && !isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path)
+                            }
                         }
                     }
-                    else -> {
-                        if (file.local.path.isNotEmpty()) {
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
-                        }
-                    }
-                }
                 }
             } catch (e: Exception) {
                 _uiState.value = PlayerUiState.Error(
