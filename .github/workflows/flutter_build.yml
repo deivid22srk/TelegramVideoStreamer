@@ -1,0 +1,58 @@
+name: Build Hybrid Flutter/Android APK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'flutter_video_mode/**'
+      - '.github/workflows/flutter_build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Hybrid APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Obter dependências Flutter
+        working-directory: flutter_video_mode
+        run: flutter pub get
+
+      - name: Compilar Módulo Flutter (AAR)
+        working-directory: flutter_video_mode
+        run: flutter build aar --no-debug --no-profile
+
+      - name: Tornar gradlew executável
+        run: chmod +x gradlew
+
+      - name: Compilar APK com Integração Flutter
+        run: ./gradlew :app:assembleDebug --stacktrace
+        env:
+          FLUTTER_ROOT: ${{ env.FLUTTER_HOME }}
+
+      - name: Upload do APK Híbrido
+        uses: actions/upload-artifact@v4
+        with:
+          name: TelegramVideoStreamer-Hybrid-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
