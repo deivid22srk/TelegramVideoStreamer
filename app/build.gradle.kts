@@ -101,8 +101,8 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
 
-    // TDLib - Telegram Database Library
-    implementation("org.drinkless:tdlib:latest.release")
+    // TDLib - Telegram Database Library (Prebuilt for Android)
+    implementation("ca.denisab85:tdlib:v1.8.8-20221104")
 
     // Tests
     testImplementation(libs.junit)
