@@ -41,6 +41,15 @@ class TelegramClient @Inject constructor(
 ) {
     companion object {
         private const val TAG = "TelegramClient"
+
+        init {
+            try {
+                System.loadLibrary("tdjni")
+                Log.d(TAG, "TDLib native library loaded successfully")
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to load TDLib native library: ${e.message}")
+            }
+        }
     }
 
     private var API_ID = 0
