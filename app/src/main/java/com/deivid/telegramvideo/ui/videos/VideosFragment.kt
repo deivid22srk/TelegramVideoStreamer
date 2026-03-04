@@ -184,13 +184,17 @@ class VideosFragment : Fragment() {
                 AddMovieDialog.show(requireContext(), video, remoteFileId) { baseMovie ->
                     lifecycleScope.launch {
                         val seriesId = java.util.UUID.randomUUID().toString()
+                        val seriesTitle = baseMovie.seriesTitle ?: baseMovie.title
+
                         selectedVideos.forEachIndexed { index, selectedVideo ->
                             val rId = viewModel.getRemoteFileId(selectedVideo) ?: ""
+                            val currentEpisode = (baseMovie.episode ?: 1) + index
                             val movie = baseMovie.copy(
                                 id = java.util.UUID.randomUUID().toString(),
                                 seriesId = seriesId,
-                                title = "${baseMovie.title} - E${(baseMovie.episode ?: 1) + index}",
-                                episode = (baseMovie.episode ?: 1) + index,
+                                seriesTitle = seriesTitle,
+                                title = "$seriesTitle - T${baseMovie.season ?: 1} E$currentEpisode",
+                                episode = currentEpisode,
                                 remoteFileId = rId,
                                 fileName = selectedVideo.fileName,
                                 duration = selectedVideo.duration,

@@ -12,5 +12,6 @@ data class SeriesItem(
     val messageId: Long = 0,
     val title: String,
     val synopsis: String,
-    val coverUrl: String?
+    val coverUrl: String?,
+    val seasons: Int = 1
 ) : Parcelable

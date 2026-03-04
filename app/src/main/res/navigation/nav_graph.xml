@@ -116,6 +116,24 @@
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
+    <!-- Detalhes do Filme/Série -->
+    <fragment
+        android:id="@+id/movieDetailsFragment"
+        android:name="com.deivid.telegramvideo.ui.videos.MovieDetailsFragment"
+        android:label="Detalhes"
+        tools:layout="@layout/fragment_movie_details">
+        <argument
+            android:name="movieItem"
+            app:argType="com.deivid.telegramvideo.data.model.MovieItem" />
+        <action
+            android:id="@+id/action_movieDetailsFragment_to_playerFragment"
+            app:destination="@id/playerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
     <!-- Tela de vídeos de um chat -->
     <fragment
         android:id="@+id/videosFragment"
@@ -149,6 +167,13 @@
         <action
             android:id="@+id/action_videoModeFragment_to_playerFragment"
             app:destination="@id/playerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_videoModeFragment_to_movieDetailsFragment"
+            app:destination="@id/movieDetailsFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"

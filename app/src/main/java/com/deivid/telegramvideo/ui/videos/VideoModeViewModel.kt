@@ -38,23 +38,32 @@ class VideoModeViewModel @Inject constructor(
     private fun groupMovies(movies: List<MovieItem>): List<VideoLibraryItem> {
         val result = mutableListOf<VideoLibraryItem>()
 
-        // Separa filmes de séries
-        val simpleMovies = movies.filter { !it.isSeries }.sortedBy { it.title }
-        val series = movies.filter { it.isSeries }
-            .groupBy { it.seriesTitle ?: "Série Sem Título" }
-            .toSortedMap()
+        // Recentemente Adicionados
+        val recentlyAdded = movies.sortedByDescending { it.date }.take(10)
+        if (recentlyAdded.isNotEmpty()) {
+            result.add(VideoLibraryItem.Header("Recentemente Adicionados"))
+            result.addAll(recentlyAdded.map { VideoLibraryItem.Movie(it) })
+        }
 
+        // Filmes
+        val simpleMovies = movies.filter { !it.isSeries }.sortedBy { it.title }
         if (simpleMovies.isNotEmpty()) {
             result.add(VideoLibraryItem.Header("Filmes"))
             result.addAll(simpleMovies.map { VideoLibraryItem.Movie(it) })
         }
 
-        series.forEach { (title, episodes) ->
-            result.add(VideoLibraryItem.Header(title))
-            val seasons = episodes.groupBy { it.season ?: 1 }.toSortedMap()
-            seasons.forEach { (season, seasonEpisodes) ->
-                result.add(VideoLibraryItem.Header("  Temporada $season"))
-                result.addAll(seasonEpisodes.sortedBy { it.episode ?: 0 }.map { VideoLibraryItem.Movie(it) })
+        // Séries
+        val series = movies.filter { it.isSeries }
+            .groupBy { it.seriesTitle ?: "Série Sem Título" }
+            .toSortedMap()
+
+        if (series.isNotEmpty()) {
+            result.add(VideoLibraryItem.Header("Séries"))
+            series.forEach { (title, episodes) ->
+                // Aqui podemos escolher mostrar apenas o primeiro episódio de cada série como um card de série
+                episodes.firstOrNull()?.let { firstEpisode ->
+                    result.add(VideoLibraryItem.Movie(firstEpisode.copy(title = title)))
+                }
             }
         }
 

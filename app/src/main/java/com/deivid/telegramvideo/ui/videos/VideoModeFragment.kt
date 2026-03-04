@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
+import com.deivid.telegramvideo.ui.videos.VideoModeFragmentDirections
 import com.deivid.telegramvideo.data.model.MovieItem
 import com.deivid.telegramvideo.data.repository.TelegramRepository
 import com.deivid.telegramvideo.data.repository.VideoModeRepository
@@ -35,7 +36,7 @@ class VideoModeFragment : Fragment() {
     @Inject lateinit var videoModeRepository: VideoModeRepository
 
     private val viewModel: VideoModeViewModel by viewModels()
-    private lateinit var movieAdapter: MovieAdapter
+    private lateinit var categoryAdapter: CategoryAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,11 +57,10 @@ class VideoModeFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        movieAdapter = MovieAdapter(
+        categoryAdapter = CategoryAdapter(
             onMovieClick = { movie ->
-                val action = VideoModeFragmentDirections.actionVideoModeFragmentToPlayerFragment(
-                    videoItem = movie.toVideoItem(),
-                    chatTitle = movie.title
+                val action = VideoModeFragmentDirections.actionVideoModeFragmentToMovieDetailsFragment(
+                    movieItem = movie
                 )
                 findNavController().navigate(action)
             },
@@ -72,15 +72,8 @@ class VideoModeFragment : Fragment() {
             }
         )
 
-        val gridLayoutManager = GridLayoutManager(requireContext(), 2)
-        gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                return if (movieAdapter.getItemViewType(position) == 0) 2 else 1
-            }
-        }
-
-        binding.recyclerViewMovies.layoutManager = gridLayoutManager
-        binding.recyclerViewMovies.adapter = movieAdapter
+        binding.recyclerViewMovies.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+        binding.recyclerViewMovies.adapter = categoryAdapter
 
         binding.swipeRefresh.setOnRefreshListener {
             lifecycleScope.launch {
@@ -126,7 +119,48 @@ class VideoModeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.libraryItems.collect { items ->
-                    movieAdapter.submitList(items)
+                    // Destaque
+                    val firstMovie = items.filterIsInstance<VideoLibraryItem.Movie>().firstOrNull()?.movie
+                    if (firstMovie != null) {
+                        binding.layoutFeatured.visibility = View.VISIBLE
+                        binding.tvFeaturedTitle.text = firstMovie.title
+                        if (!firstMovie.coverUrl.isNullOrEmpty()) {
+                            com.bumptech.glide.Glide.with(this@VideoModeFragment)
+                                .load(firstMovie.coverUrl)
+                                .into(binding.ivFeaturedBackdrop)
+                        }
+                        binding.btnFeaturedWatch.setOnClickListener {
+                            val action = VideoModeFragmentDirections.actionVideoModeFragmentToMovieDetailsFragment(firstMovie)
+                            findNavController().navigate(action)
+                        }
+                    } else {
+                        binding.layoutFeatured.visibility = View.GONE
+                    }
+
+                    // Categorias
+                    val categories = mutableListOf<LibraryDisplayItem.Category>()
+                    var currentTitle = ""
+                    var currentMovies = mutableListOf<MovieItem>()
+
+                    items.forEach { item ->
+                        when (item) {
+                            is VideoLibraryItem.Header -> {
+                                if (currentTitle.isNotEmpty()) {
+                                    categories.add(LibraryDisplayItem.Category(currentTitle, currentMovies))
+                                }
+                                currentTitle = item.title
+                                currentMovies = mutableListOf()
+                            }
+                            is VideoLibraryItem.Movie -> {
+                                currentMovies.add(item.movie)
+                            }
+                        }
+                    }
+                    if (currentTitle.isNotEmpty()) {
+                        categories.add(LibraryDisplayItem.Category(currentTitle, currentMovies))
+                    }
+
+                    categoryAdapter.submitList(categories)
                     binding.tvEmpty.isVisible = items.isEmpty() && videoModeRepository.storageChatId.value != 0L
                 }
             }

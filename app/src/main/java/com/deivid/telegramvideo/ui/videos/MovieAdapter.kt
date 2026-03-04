@@ -67,6 +67,11 @@ class MovieAdapter(
 
     inner class MovieViewHolder(private val binding: ItemVideoBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(movie: MovieItem) {
+            // Ajustar largura para horizontal se necessário
+            val params = binding.root.layoutParams
+            params.width = (120 * binding.root.context.resources.displayMetrics.density).toInt()
+            binding.root.layoutParams = params
+
             binding.tvDuration.text = DurationFormatter.format(movie.duration)
             binding.tvFileSize.isVisible = false
             binding.tvDate.text = if (movie.isSeries) {

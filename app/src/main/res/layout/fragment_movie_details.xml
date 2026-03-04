@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Capa do Filme (Poster) -->
+        <ImageView
+            android:id="@+id/ivBackdrop"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:scaleType="centerCrop"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@drawable/ic_video_placeholder" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:background="@drawable/bg_poster_gradient"
+            app:layout_constraintBottom_toBottomOf="@id/ivBackdrop" />
+
+        <!-- Título -->
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="-40dp"
+            android:textColor="@color/white"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/ivBackdrop"
+            tools:text="Nome do Filme" />
+
+        <!-- Botão Assistir Agora -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWatchNow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:padding="12dp"
+            android:text="ASSISTIR AGORA"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/hbo_purple"
+            app:cornerRadius="4dp"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+        <!-- Sinopse -->
+        <TextView
+            android:id="@+id/tvSynopsis"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:textColor="@color/on_surface_secondary"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/btnWatchNow"
+            tools:text="Sinopse do filme aqui..." />
+
+        <!-- Seção de Séries (Temporadas e Episódios) -->
+        <LinearLayout
+            android:id="@+id/layoutSeries"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/tvSynopsis">
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayoutSeasons"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/background"
+                app:tabIndicatorColor="@color/hbo_purple"
+                app:tabSelectedTextColor="@color/white"
+                app:tabTextColor="@color/on_surface_secondary" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerViewEpisodes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="8dp"
+                tools:listitem="@layout/item_video" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>
