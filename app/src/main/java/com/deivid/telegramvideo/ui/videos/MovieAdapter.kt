@@ -10,7 +10,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.deivid.telegramvideo.R
 import com.deivid.telegramvideo.data.model.MovieItem
-import com.deivid.telegramvideo.databinding.ItemVideoBinding
+import com.deivid.telegramvideo.databinding.ItemMovieBinding
 import com.deivid.telegramvideo.util.DurationFormatter
 
 /**
@@ -38,7 +38,7 @@ class MovieAdapter(
             val view = LayoutInflater.from(parent.context).inflate(android.R.layout.simple_list_item_1, parent, false)
             HeaderViewHolder(view)
         } else {
-            val binding = ItemVideoBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+            val binding = ItemMovieBinding.inflate(LayoutInflater.from(parent.context), parent, false)
             MovieViewHolder(binding)
         }
     }
@@ -63,16 +63,14 @@ class MovieAdapter(
         }
     }
 
-    inner class MovieViewHolder(private val binding: ItemVideoBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class MovieViewHolder(private val binding: ItemMovieBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(movie: MovieItem) {
-            binding.tvDuration.text = DurationFormatter.format(movie.duration)
-            binding.tvFileSize.isVisible = false
-            binding.tvDate.text = if (movie.isSeries) {
-                "T${movie.season} E${movie.episode}"
-            } else ""
-
-            binding.tvCaption.text = movie.title
-            binding.tvCaption.isVisible = true
+            binding.tvTitle.text = movie.title
+            binding.tvSubInfo.text = if (movie.isSeries) {
+                "T${movie.season} E${movie.episode} • ${DurationFormatter.format(movie.duration)}"
+            } else {
+                DurationFormatter.format(movie.duration)
+            }
 
             if (!movie.coverUrl.isNullOrEmpty()) {
                 Glide.with(binding.root.context)
@@ -80,13 +78,11 @@ class MovieAdapter(
                     .centerCrop()
                     .transition(DrawableTransitionOptions.withCrossFade())
                     .placeholder(R.drawable.ic_video_placeholder)
-                    .into(binding.ivThumbnail)
+                    .into(binding.ivPoster)
             } else {
-                binding.ivThumbnail.setImageResource(R.drawable.ic_video_placeholder)
+                binding.ivPoster.setImageResource(R.drawable.ic_video_placeholder)
             }
 
-            binding.ivDownloaded.isVisible = false
-            binding.btnDelete.isVisible = true
             binding.btnDelete.setOnClickListener { onMovieDelete(movie) }
             binding.root.setOnClickListener { onMovieClick(movie) }
         }

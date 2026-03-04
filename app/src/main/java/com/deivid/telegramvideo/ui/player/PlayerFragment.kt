@@ -8,9 +8,15 @@ import android.util.Rational
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.ImageButton
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -70,12 +76,32 @@ class PlayerFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         requireActivity().title = args.chatTitle
+        hideSystemUI()
 
         setupClickListeners()
         observeUiState()
 
         // Inicia a preparação do vídeo
         viewModel.prepareVideo(args.videoItem)
+    }
+
+    private fun hideSystemUI() {
+        (activity as? AppCompatActivity)?.supportActionBar?.hide()
+
+        val window = requireActivity().window
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, binding.root).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    private fun showSystemUI() {
+        (activity as? AppCompatActivity)?.supportActionBar?.show()
+
+        val window = requireActivity().window
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowInsetsControllerCompat(window, binding.root).show(WindowInsetsCompat.Type.systemBars())
     }
 
     private fun setupClickListeners() {
@@ -259,6 +285,7 @@ class PlayerFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        showSystemUI()
         releasePlayer()
         _binding = null
     }

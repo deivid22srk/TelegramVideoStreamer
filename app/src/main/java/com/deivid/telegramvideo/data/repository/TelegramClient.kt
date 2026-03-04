@@ -235,8 +235,13 @@ class TelegramClient @Inject constructor(
 
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
-            val filter = TdApi.SearchMessagesFilterVideo()
-            val request = TdApi.SearchChatMessages(chatId, null, "", null, fromMessageId, 0, limit, filter)
+            val request = TdApi.SearchChatMessages().apply {
+                this.chatId = chatId
+                this.query = ""
+                this.fromMessageId = fromMessageId
+                this.limit = limit
+                this.filter = TdApi.SearchMessagesFilterVideo()
+            }
             client?.send(request) { result ->
                 if (result is TdApi.FoundChatMessages) continuation.resume(Result.success(result.messages.toList()))
                 else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao buscar")))
@@ -259,7 +264,7 @@ class TelegramClient @Inject constructor(
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> =
+    fun downloadFile(fileId: Int, priority: Int = 32): Flow<TdApi.File> =
         updates.filterIsInstance<TdApi.UpdateFile>()
             .filter { it.file.id == fileId }
             .map { it.file }
@@ -279,9 +284,27 @@ class TelegramClient @Inject constructor(
     suspend fun sendMessage(chatId: Long, text: String): Result<TdApi.Message> =
         suspendCancellableCoroutine { continuation ->
             val content = TdApi.InputMessageText(TdApi.FormattedText(text, null), null, false)
-            client?.send(TdApi.SendMessage(chatId, null, null, null, null, content)) { result ->
+            val request = TdApi.SendMessage().apply {
+                this.chatId = chatId
+                this.inputMessageContent = content
+            }
+            client?.send(request) { result ->
                 if (result is TdApi.Message) continuation.resume(Result.success(result))
                 else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao enviar")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    suspend fun editMessageText(chatId: Long, messageId: Long, text: String): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            val content = TdApi.InputMessageText(TdApi.FormattedText(text, null), null, false)
+            val request = TdApi.EditMessageText().apply {
+                this.chatId = chatId
+                this.messageId = messageId
+                this.inputMessageContent = content
+            }
+            client?.send(request) { result ->
+                if (result is TdApi.Message) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao editar")))
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 

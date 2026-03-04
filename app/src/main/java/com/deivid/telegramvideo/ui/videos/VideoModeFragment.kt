@@ -58,21 +58,17 @@ class VideoModeFragment : Fragment() {
     private fun setupRecyclerView() {
         movieAdapter = MovieAdapter(
             onMovieClick = { movie ->
-                val action = VideoModeFragmentDirections.actionVideoModeFragmentToPlayerFragment(
-                    videoItem = movie.toVideoItem(),
-                    chatTitle = movie.title
-                )
-                findNavController().navigate(action)
+                showMovieOptionsDialog(movie)
             },
             onMovieDelete = { movie ->
                 showDeleteConfirmDialog(movie)
             }
         )
 
-        val gridLayoutManager = GridLayoutManager(requireContext(), 2)
+        val gridLayoutManager = GridLayoutManager(requireContext(), 3)
         gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int): Int {
-                return if (movieAdapter.getItemViewType(position) == 0) 2 else 1
+                return if (movieAdapter.getItemViewType(position) == 0) 3 else 1
             }
         }
 
@@ -84,6 +80,35 @@ class VideoModeFragment : Fragment() {
                 videoModeRepository.restoreMovies()
                 binding.swipeRefresh.isRefreshing = false
             }
+        }
+    }
+
+    private fun showMovieOptionsDialog(movie: MovieItem) {
+        val options = arrayOf("Assistir", "Editar", "Excluir")
+        AlertDialog.Builder(requireContext())
+            .setTitle(movie.title)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> playMovie(movie)
+                    1 -> showEditDialog(movie)
+                    2 -> showDeleteConfirmDialog(movie)
+                }
+            }
+            .show()
+    }
+
+    private fun playMovie(movie: MovieItem) {
+        val action = VideoModeFragmentDirections.actionVideoModeFragmentToPlayerFragment(
+            videoItem = movie.toVideoItem(),
+            chatTitle = movie.title
+        )
+        findNavController().navigate(action)
+    }
+
+    private fun showEditDialog(movie: MovieItem) {
+        EditMovieDialog.show(requireContext(), movie) { updatedMovie ->
+            viewModel.updateMovie(updatedMovie)
+            Toast.makeText(requireContext(), "Atualizado com sucesso!", Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -66,4 +66,10 @@ class VideoModeViewModel @Inject constructor(
             videoModeRepository.deleteMovie(movie)
         }
     }
+
+    fun updateMovie(movie: MovieItem) {
+        viewModelScope.launch {
+            videoModeRepository.updateMovie(movie)
+        }
+    }
 }

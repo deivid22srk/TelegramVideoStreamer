@@ -6,6 +6,7 @@ import androidx.media3.common.C
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
+import android.util.Log
 import kotlinx.coroutines.runBlocking
 import org.drinkless.tdlib.TdApi
 import kotlin.math.min
@@ -60,25 +61,31 @@ class TdLibDataSource(
                     try {
                         val dataField = obj.javaClass.getField("data")
                         val data = dataField.get(obj) as ByteArray
+
                         if (data.isEmpty()) {
+                            // Se os dados estiverem vazios, retornamos 0 para o ExoPlayer tentar novamente
+                            // em vez de falhar a reprodução.
                             0
                         } else {
-                            val bytesActuallyRead = data.size
+                            val bytesActuallyRead = min(data.size, length)
                             System.arraycopy(data, 0, buffer, offset, bytesActuallyRead)
                             currentPosition += bytesActuallyRead.toLong()
                             bytesRemaining -= bytesActuallyRead.toLong()
                             bytesActuallyRead
                         }
                     } catch (e: Exception) {
-                        -1
+                        Log.e("TdLibDataSource", "Erro ao acessar campo 'data' por reflexão", e)
+                        0 // Tenta novamente em vez de falhar
                     }
                 },
-                onFailure = {
-                    -1
+                onFailure = { e ->
+                    Log.e("TdLibDataSource", "Erro no readFilePart: ${e.message}")
+                    0 // Retorna 0 para o ExoPlayer tentar novamente, permitindo recuperação após seek
                 }
             )
         } catch (e: Exception) {
-            -1
+            Log.e("TdLibDataSource", "Exceção no read: ${e.message}")
+            0
         }
     }
 
