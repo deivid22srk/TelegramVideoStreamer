@@ -1,5 +1,6 @@
 package com.deivid.telegramvideo.ui.videos
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -52,10 +53,31 @@ class VideoModeFragment : Fragment() {
     private fun setupRecyclerView() {
         categoryAdapter = CategoryAdapter(
             onMovieClick = { movie ->
-                val action = VideoModeFragmentDirections.actionVideoModeFragmentToMovieDetailsFragment(
-                    movieItem = movie
-                )
-                findNavController().navigate(action)
+                if (movie.isSeries) {
+                    val action = VideoModeFragmentDirections.actionVideoModeFragmentToMovieDetailsFragment(
+                        movieItem = movie
+                    )
+                    findNavController().navigate(action)
+                } else {
+                    val prefs = requireContext().getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
+                    val playerType = prefs.getString("player_type", "EXO")
+
+                    if (playerType == "VLC") {
+                        val action = VideoModeFragmentDirections.actionVideoModeFragmentToVlcPlayerFragment(
+                            videoItem = movie.toVideoItem(),
+                            chatTitle = movie.title,
+                            movieItem = movie
+                        )
+                        findNavController().navigate(action)
+                    } else {
+                        val action = VideoModeFragmentDirections.actionVideoModeFragmentToPlayerFragment(
+                            videoItem = movie.toVideoItem(),
+                            chatTitle = movie.title,
+                            movieItem = movie
+                        )
+                        findNavController().navigate(action)
+                    }
+                }
             },
             onMovieDelete = { movie ->
                 showDeleteConfirmDialog(movie)
@@ -190,6 +212,11 @@ class VideoModeFragment : Fragment() {
                         lifecycleScope.launch {
                             videoModeRepository.restoreMovies()
                         }
+                        true
+                    }
+                    R.id.action_settings -> {
+                        val action = VideoModeFragmentDirections.actionVideoModeFragmentToSetupFragment(isEditing = true)
+                        findNavController().navigate(action)
                         true
                     }
                     else -> false

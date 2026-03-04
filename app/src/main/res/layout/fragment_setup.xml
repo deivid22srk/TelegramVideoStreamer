@@ -64,7 +64,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number" />
-
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -83,8 +82,40 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="text" />
-
         </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvPlayerTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="Preferências do Player"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            app:layout_constraintTop_toBottomOf="@id/tilApiHash"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <RadioGroup
+            android:id="@+id/rgPlayerType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@id/tvPlayerTitle"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <RadioButton
+                android:id="@+id/rbExoPlayer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ExoPlayer (Padrão)"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/rbVlcPlayer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VLC Player" />
+        </RadioGroup>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
@@ -94,7 +125,7 @@
             android:text="Salvar e Continuar"
             app:cornerRadius="12dp"
             app:backgroundTint="@color/telegram_blue"
-            app:layout_constraintTop_toBottomOf="@id/tilApiHash"
+            app:layout_constraintTop_toBottomOf="@id/rgPlayerType"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 

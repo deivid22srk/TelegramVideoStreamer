@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val layoutParams = binding.navHostFragment.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
             when (destination.id) {
-                R.id.loginFragment, R.id.codeFragment, R.id.passwordFragment, R.id.playerFragment -> {
+                R.id.loginFragment, R.id.codeFragment, R.id.passwordFragment, R.id.playerFragment, R.id.vlcPlayerFragment -> {
                     supportActionBar?.hide()
                     binding.appBarLayout.visibility = android.view.View.GONE
                     binding.bottomNavigation.visibility = android.view.View.GONE

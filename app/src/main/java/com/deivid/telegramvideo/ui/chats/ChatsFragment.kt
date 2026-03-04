@@ -105,6 +105,11 @@ class ChatsFragment : Fragment() {
                         findNavController().navigate(R.id.action_chatsFragment_to_videoModeFragment)
                         true
                     }
+                    R.id.action_settings -> {
+                        val action = ChatsFragmentDirections.actionChatsFragmentToSetupFragment(isEditing = true)
+                        findNavController().navigate(action)
+                        true
+                    }
                     else -> false
                 }
             }

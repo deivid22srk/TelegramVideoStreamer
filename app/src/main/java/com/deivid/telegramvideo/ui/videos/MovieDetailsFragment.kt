@@ -1,5 +1,6 @@
 package com.deivid.telegramvideo.ui.videos
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -67,12 +68,24 @@ class MovieDetailsFragment : Fragment() {
         }
 
         binding.btnWatchNow.setOnClickListener {
-            val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToPlayerFragment(
-                videoItem = movie.toVideoItem(),
-                chatTitle = args.movieItem.title,
-                movieItem = args.movieItem
-            )
-            findNavController().navigate(action)
+            val prefs = requireContext().getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
+            val playerType = prefs.getString("player_type", "EXO")
+
+            if (playerType == "VLC") {
+                val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToVlcPlayerFragment(
+                    videoItem = movie.toVideoItem(),
+                    chatTitle = movie.title,
+                    movieItem = movie
+                )
+                findNavController().navigate(action)
+            } else {
+                val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToPlayerFragment(
+                    videoItem = movie.toVideoItem(),
+                    chatTitle = args.movieItem.title,
+                    movieItem = args.movieItem
+                )
+                findNavController().navigate(action)
+            }
         }
     }
 
@@ -92,11 +105,25 @@ class MovieDetailsFragment : Fragment() {
 
         episodeAdapter = VideosAdapter(
             onVideoClick = { video ->
-                val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToPlayerFragment(
-                    videoItem = video,
-                    chatTitle = movie.title
-                )
-                findNavController().navigate(action)
+                val epMovie = allSeriesEpisodes.find { it.remoteFileId == video.remoteFileId }
+                val prefs = requireContext().getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
+                val playerType = prefs.getString("player_type", "EXO")
+
+                if (playerType == "VLC") {
+                    val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToVlcPlayerFragment(
+                        videoItem = video,
+                        chatTitle = movie.title,
+                        movieItem = epMovie
+                    )
+                    findNavController().navigate(action)
+                } else {
+                    val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToPlayerFragment(
+                        videoItem = video,
+                        chatTitle = movie.title,
+                        movieItem = epMovie
+                    )
+                    findNavController().navigate(action)
+                }
             },
             onVideoLongClick = {},
             onSelectionChanged = {}

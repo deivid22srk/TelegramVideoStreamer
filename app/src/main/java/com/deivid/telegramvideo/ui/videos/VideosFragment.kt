@@ -1,5 +1,6 @@
 package com.deivid.telegramvideo.ui.videos
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -130,12 +131,23 @@ class VideosFragment : Fragment() {
                         }
                     }
                 } else {
-                    // Navega para o player ao clicar em um vídeo
-                    val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
-                        videoItem = video,
-                        chatTitle = args.chatTitle
-                    )
-                    findNavController().navigate(action)
+                    val prefs = requireContext().getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
+                    val playerType = prefs.getString("player_type", "EXO")
+
+                    if (playerType == "VLC") {
+                        val action = VideosFragmentDirections.actionVideosFragmentToVlcPlayerFragment(
+                            videoItem = video,
+                            chatTitle = args.chatTitle
+                        )
+                        findNavController().navigate(action)
+                    } else {
+                        // Navega para o player ao clicar em um vídeo
+                        val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                            videoItem = video,
+                            chatTitle = args.chatTitle
+                        )
+                        findNavController().navigate(action)
+                    }
                 }
             },
             onVideoLongClick = { video ->

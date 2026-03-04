@@ -22,6 +22,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_settings"
+        android:title="Configurações"
+        android:icon="@drawable/ic_lock"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_backup"
         android:title="Backup"
         android:icon="@drawable/ic_refresh"
