@@ -4,12 +4,22 @@ import android.content.Context
 import android.util.Log
 import com.deivid.telegramvideo.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
@@ -33,7 +43,6 @@ sealed class AuthState {
 
 /**
  * Cliente TDLib que gerencia toda a comunicação com a API do Telegram.
- * Implementa o padrão Singleton via Hilt para garantir uma única instância.
  */
 @Singleton
 class TelegramClient @Inject constructor(
@@ -41,6 +50,15 @@ class TelegramClient @Inject constructor(
 ) {
     companion object {
         private const val TAG = "TelegramClient"
+
+        init {
+            try {
+                System.loadLibrary("tdjni")
+                Log.d(TAG, "TDLib native library loaded successfully")
+            } catch (e: UnsatisfiedLinkError) {
+                Log.e(TAG, "Failed to load TDLib native library: ${e.message}")
+            }
+        }
     }
 
     private var API_ID = 0
@@ -54,6 +72,11 @@ class TelegramClient @Inject constructor(
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
+    private val _updates = MutableSharedFlow<TdApi.Object>(extraBufferCapacity = 100)
+    val updates = _updates.asSharedFlow()
+
+    private val clientScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     init {
         loadCredentials()
         initializeClient()
@@ -63,12 +86,8 @@ class TelegramClient @Inject constructor(
         val prefs = context.getSharedPreferences("telegram_prefs", Context.MODE_PRIVATE)
         API_ID = prefs.getInt("api_id", 0)
         API_HASH = prefs.getString("api_hash", "") ?: ""
-        Log.d(TAG, "Credentials loaded: API_ID=$API_ID")
     }
 
-    /**
-     * Inicializa o cliente TDLib com as configurações necessárias.
-     */
     private fun initializeClient() {
         try {
             Client.execute(TdApi.SetLogVerbosityLevel(0))
@@ -80,265 +99,230 @@ class TelegramClient @Inject constructor(
             )
 
             _isInitialized.value = true
-            Log.d(TAG, "TDLib client initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize TDLib client: ${e.message}")
-            _authState.value = AuthState.Error("Falha ao inicializar cliente Telegram: ${e.message}")
+            _authState.value = AuthState.Error("Falha ao inicializar: ${e.message}")
         }
     }
 
-    /**
-     * Processa as atualizações recebidas do TDLib.
-     */
     private fun handleUpdate(update: TdApi.Object) {
+        clientScope.launch {
+            _updates.emit(update)
+        }
         when (update) {
-            is TdApi.UpdateAuthorizationState -> {
-                handleAuthorizationState(update.authorizationState)
-            }
-            else -> {
-                Log.v(TAG, "Received update: ${update.javaClass.simpleName}")
-            }
+            is TdApi.UpdateAuthorizationState -> handleAuthorizationState(update.authorizationState)
         }
     }
 
-    /**
-     * Trata as mudanças de estado de autorização.
-     */
     private fun handleAuthorizationState(authorizationState: TdApi.AuthorizationState) {
         when (authorizationState) {
-            is TdApi.AuthorizationStateWaitTdlibParameters -> {
-                sendTdlibParameters()
-            }
-            is TdApi.AuthorizationStateWaitPhoneNumber -> {
-                _authState.value = AuthState.WaitPhoneNumber
-            }
-            is TdApi.AuthorizationStateWaitCode -> {
-                _authState.value = AuthState.WaitCode
-            }
-            is TdApi.AuthorizationStateWaitPassword -> {
-                _authState.value = AuthState.WaitPassword
-            }
-            is TdApi.AuthorizationStateReady -> {
-                _authState.value = AuthState.Authorized
-            }
-            is TdApi.AuthorizationStateLoggingOut -> {
-                _authState.value = AuthState.LoggingOut
-            }
+            is TdApi.AuthorizationStateWaitTdlibParameters -> sendTdlibParameters()
+            is TdApi.AuthorizationStateWaitPhoneNumber -> _authState.value = AuthState.WaitPhoneNumber
+            is TdApi.AuthorizationStateWaitCode -> _authState.value = AuthState.WaitCode
+            is TdApi.AuthorizationStateWaitPassword -> _authState.value = AuthState.WaitPassword
+            is TdApi.AuthorizationStateReady -> _authState.value = AuthState.Authorized
+            is TdApi.AuthorizationStateLoggingOut -> _authState.value = AuthState.LoggingOut
             is TdApi.AuthorizationStateClosed -> {
                 _authState.value = AuthState.WaitPhoneNumber
                 initializeClient()
             }
-            else -> {
-                Log.d(TAG, "Unknown auth state: ${authorizationState.javaClass.simpleName}")
-            }
         }
     }
 
-    /**
-     * Envia os parâmetros de configuração do TDLib.
-     */
     private fun sendTdlibParameters() {
         val databaseDir = File(context.filesDir, "tdlib").absolutePath
         val filesDir = File(context.filesDir, "tdlib_files").absolutePath
-
-        // Recarrega credenciais caso tenham sido alteradas
         loadCredentials()
 
         val parameters = TdApi.SetTdlibParameters().apply {
             this.databaseDirectory = databaseDir
             this.filesDirectory = filesDir
+            this.useFileDatabase = true
+            this.useChatInfoDatabase = true
             this.useMessageDatabase = true
             this.useSecretChats = false
             this.apiId = API_ID
             this.apiHash = API_HASH
             this.systemLanguageCode = "pt-BR"
             this.deviceModel = android.os.Build.MODEL
+            this.systemVersion = android.os.Build.VERSION.RELEASE
             this.applicationVersion = "1.0.0"
-            this.enableStorageOptimizer = true
         }
 
         client?.send(parameters) { result ->
-            if (result is TdApi.Error) {
-                Log.e(TAG, "Error setting TDLib parameters: ${result.message}")
-                _authState.value = AuthState.Error(result.message)
-            }
+            if (result is TdApi.Error) _authState.value = AuthState.Error(result.message)
         }
     }
 
-    /**
-     * Envia o número de telefone para iniciar a autenticação.
-     */
     suspend fun sendPhoneNumber(phoneNumber: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
-            val request = TdApi.SetAuthenticationPhoneNumber(
-                phoneNumber,
-                TdApi.PhoneNumberAuthenticationSettings().apply {
-                    allowFlashCall = false
-                    isCurrentPhoneNumber = false
-                    allowSmsRetrieverApi = false
-                }
-            )
-
+            val settings = TdApi.PhoneNumberAuthenticationSettings(false, false, false, false, false, null, null)
+            val request = TdApi.SetAuthenticationPhoneNumber(phoneNumber, settings)
             client?.send(request) { result ->
-                when (result) {
-                    is TdApi.Ok -> continuation.resume(Result.success(Unit))
-                    is TdApi.Error -> continuation.resume(
-                        Result.failure(Exception(result.message))
-                    )
-                    else -> continuation.resume(
-                        Result.failure(Exception("Resposta inesperada"))
-                    )
-                }
+                if (result is TdApi.Ok) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro desconhecido")))
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    /**
-     * Verifica o código de autenticação recebido via SMS/Telegram.
-     */
     suspend fun checkAuthCode(code: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
             client?.send(TdApi.CheckAuthenticationCode(code)) { result ->
-                when (result) {
-                    is TdApi.Ok -> continuation.resume(Result.success(Unit))
-                    is TdApi.Error -> continuation.resume(
-                        Result.failure(Exception(result.message))
-                    )
-                    else -> continuation.resume(
-                        Result.failure(Exception("Resposta inesperada"))
-                    )
-                }
+                if (result is TdApi.Ok) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro desconhecido")))
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    /**
-     * Verifica a senha de dois fatores (2FA).
-     */
     suspend fun checkAuthPassword(password: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
             client?.send(TdApi.CheckAuthenticationPassword(password)) { result ->
-                when (result) {
-                    is TdApi.Ok -> continuation.resume(Result.success(Unit))
-                    is TdApi.Error -> continuation.resume(
-                        Result.failure(Exception(result.message))
-                    )
-                    else -> continuation.resume(
-                        Result.failure(Exception("Resposta inesperada"))
-                    )
-                }
+                if (result is TdApi.Ok) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro desconhecido")))
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    /**
-     * Carrega a lista de chats do usuário.
-     */
-    suspend fun loadChats(limit: Int = 50): Result<List<TdApi.Chat>> =
+    suspend fun loadChats(limit: Int = 100): Result<List<TdApi.Chat>> =
         suspendCancellableCoroutine { continuation ->
-            client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { result ->
-                when (result) {
-                    is TdApi.Ok -> {
-                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
-                            when (chatsResult) {
-                                is TdApi.Chats -> {
-                                    val chatIds = chatsResult.chatIds
-                                    val chats = mutableListOf<TdApi.Chat>()
-                                    var remaining = chatIds.size
-
-                                    if (remaining == 0) {
-                                        continuation.resume(Result.success(emptyList()))
-                                        return@send
-                                    }
-
-                                    chatIds.forEach { chatId ->
-                                        client?.send(TdApi.GetChat(chatId)) { chatResult ->
-                                            synchronized(chats) {
-                                                if (chatResult is TdApi.Chat) {
-                                                    chats.add(chatResult)
-                                                }
-                                                remaining--
-                                                if (remaining == 0) {
-                                                    continuation.resume(
-                                                        Result.success(chats.sortedByDescending {
-                                                            it.lastMessage?.date ?: 0
-                                                        })
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                is TdApi.Error -> continuation.resume(
-                                    Result.failure(Exception(chatsResult.message))
-                                )
-                                else -> continuation.resume(Result.success(emptyList()))
-                            }
-                        }
-                    }
-                    is TdApi.Error -> {
-                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
-                            if (chatsResult is TdApi.Chats) {
-                                // Tenta retornar o que já tem
-                                continuation.resume(Result.success(emptyList()))
+            // Tenta obter os chats que já estão no cache local primeiro
+            client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
+                if (chatsResult is TdApi.Chats && chatsResult.chatIds.isNotEmpty()) {
+                    resolveChatIds(chatsResult.chatIds.toList(), continuation)
+                } else {
+                    // Se não houver chats no cache, solicita o carregamento ao TDLib
+                    client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { loadResult ->
+                        // Após tentar carregar, buscamos novamente a lista de IDs
+                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { finalResult ->
+                            if (finalResult is TdApi.Chats) {
+                                resolveChatIds(finalResult.chatIds.toList(), continuation)
                             } else {
-                                continuation.resume(Result.failure(Exception(result.message)))
+                                if (continuation.isActive) continuation.resume(Result.success(emptyList()))
                             }
                         }
                     }
-                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
                 }
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    /**
-     * Busca mensagens de vídeo em um chat específico.
-     */
+    private fun resolveChatIds(chatIds: List<Long>, continuation: kotlinx.coroutines.CancellableContinuation<Result<List<TdApi.Chat>>>) {
+        if (chatIds.isEmpty()) {
+            if (continuation.isActive) continuation.resume(Result.success(emptyList()))
+            return
+        }
+
+        val chats = mutableListOf<TdApi.Chat>()
+        val count = java.util.concurrent.atomic.AtomicInteger(chatIds.size)
+
+        chatIds.forEach { id ->
+            client?.send(TdApi.GetChat(id)) { chat ->
+                if (chat is TdApi.Chat) {
+                    synchronized(chats) { chats.add(chat) }
+                }
+                if (count.decrementAndGet() == 0) {
+                    if (continuation.isActive) {
+                        continuation.resume(Result.success(chats.sortedByDescending { it.lastMessage?.date ?: 0 }))
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun deleteMessages(chatId: Long, messageIds: LongArray, revoke: Boolean = true): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.DeleteMessages(chatId, messageIds, revoke)) { result ->
+                if (result is TdApi.Ok) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao deletar")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
-            val filter = TdApi.SearchMessagesFilterVideo()
-            client?.send(TdApi.SearchChatMessages(chatId, "", null, fromMessageId, 0, limit, filter, 0)) { result ->
-                when (result) {
-                    is TdApi.Messages -> continuation.resume(Result.success(result.messages.toList()))
-                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
-                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
-                }
+            val request = TdApi.SearchChatMessages().apply {
+                this.chatId = chatId
+                this.query = ""
+                this.fromMessageId = fromMessageId
+                this.limit = limit
+                this.filter = TdApi.SearchMessagesFilterVideo()
+            }
+            client?.send(request) { result ->
+                if (result is TdApi.FoundChatMessages) continuation.resume(Result.success(result.messages.toList()))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao buscar")))
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    /**
-     * Solicita o download de um arquivo.
-     */
-    fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> = callbackFlow {
-        client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) { result ->
-            if (result is TdApi.Error) {
-                close(Exception(result.message))
-            }
+    suspend fun getFile(fileId: Int): Result<TdApi.File> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.GetFile(fileId)) { result ->
+                if (result is TdApi.File) continuation.resume(Result.success(result))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao obter arquivo")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-        val listener = { update: TdApi.Object ->
-            if (update is TdApi.UpdateFile) {
-                if (update.file.id == fileId) {
-                    trySend(update.file)
-                    if (update.file.local.isDownloadingCompleted) {
-                        close()
-                    }
-                }
-            }
+    suspend fun getRemoteFile(remoteFileId: String): Result<TdApi.File> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.GetRemoteFile(remoteFileId, TdApi.FileTypeVideo())) { result ->
+                if (result is TdApi.File) continuation.resume(Result.success(result))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao obter arquivo remoto")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-        // Nota: Em uma implementação real, precisaríamos registrar esse listener no handleUpdate
-        // Para simplificar aqui, estamos apenas iniciando o download.
-        awaitClose { /* Remover listener se necessário */ }
-    }
+    fun downloadFile(fileId: Int, priority: Int = 32): Flow<TdApi.File> =
+        updates.filterIsInstance<TdApi.UpdateFile>()
+            .filter { it.file.id == fileId }
+            .map { it.file }
+            .onStart {
+                getFile(fileId).getOrNull()?.let { emit(it) }
+                client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) {}
+            }
 
-    /**
-     * Encerra a sessão do usuário.
-     */
+    suspend fun getChatHistory(chatId: Long, fromMessageId: Long = 0, offset: Int = 0, limit: Int = 20, onlyLocal: Boolean = false): Result<List<TdApi.Message>> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.GetChatHistory(chatId, fromMessageId, offset, limit, onlyLocal)) { result ->
+                if (result is TdApi.Messages) continuation.resume(Result.success(result.messages.toList()))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao obter histórico")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    suspend fun sendMessage(chatId: Long, text: String): Result<TdApi.Message> =
+        suspendCancellableCoroutine { continuation ->
+            val content = TdApi.InputMessageText(TdApi.FormattedText(text, null), null, false)
+            val request = TdApi.SendMessage().apply {
+                this.chatId = chatId
+                this.inputMessageContent = content
+            }
+            client?.send(request) { result ->
+                if (result is TdApi.Message) continuation.resume(Result.success(result))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao enviar")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
+    suspend fun editMessageText(chatId: Long, messageId: Long, text: String): Result<Unit> =
+        suspendCancellableCoroutine { continuation ->
+            val content = TdApi.InputMessageText(TdApi.FormattedText(text, null), null, false)
+            val request = TdApi.EditMessageText().apply {
+                this.chatId = chatId
+                this.messageId = messageId
+                this.inputMessageContent = content
+            }
+            client?.send(request) { result ->
+                if (result is TdApi.Message) continuation.resume(Result.success(Unit))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao editar")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
+
     suspend fun logout(): Result<Unit> = suspendCancellableCoroutine { continuation ->
         client?.send(TdApi.LogOut()) { result ->
-            when (result) {
-                is TdApi.Ok -> continuation.resume(Result.success(Unit))
-                is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
-                else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
-            }
+            if (result is TdApi.Ok) continuation.resume(Result.success(Unit))
+            else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro no logout")))
         } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
     }
+
+    suspend fun readFilePart(fileId: Int, offset: Long, count: Long): Result<TdApi.Object> =
+        suspendCancellableCoroutine { continuation ->
+            client?.send(TdApi.ReadFilePart(fileId, offset, count)) { result ->
+                if (result is TdApi.Error) {
+                    continuation.resume(Result.failure(Exception(result.message)))
+                } else {
+                    continuation.resume(Result.success(result))
+                }
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
 }

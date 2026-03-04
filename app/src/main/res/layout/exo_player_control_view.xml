@@ -102,6 +102,26 @@
             android:textSize="12sp"
             android:includeFontPadding="false" />
 
+        <!-- Botão Aspect Ratio -->
+        <ImageButton
+            android:id="@+id/btn_aspect_ratio"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_aspect_ratio"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/white"
+            android:contentDescription="Aspect Ratio" />
+
+        <!-- Botão PiP -->
+        <ImageButton
+            android:id="@+id/btn_pip"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_picture_in_picture"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:tint="@color/white"
+            android:contentDescription="Picture in Picture" />
+
         <!-- Botão tela cheia -->
         <ImageButton
             android:id="@id/exo_fullscreen"

@@ -98,6 +98,22 @@
             app:destination="@id/loginFragment"
             app:popUpTo="@id/chatsFragment"
             app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_chatsFragment_to_videoModeFragment"
+            app:destination="@id/videoModeFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_videosFragment_to_videoModeFragment"
+            app:destination="@id/videoModeFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <!-- Tela de vídeos de um chat -->
@@ -117,6 +133,21 @@
 
         <action
             android:id="@+id/action_videosFragment_to_playerFragment"
+            app:destination="@id/playerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <!-- Biblioteca do Modo Vídeo -->
+    <fragment
+        android:id="@+id/videoModeFragment"
+        android:name="com.deivid.telegramvideo.ui.videos.VideoModeFragment"
+        android:label="Modo Vídeo"
+        tools:layout="@layout/fragment_video_mode">
+        <action
+            android:id="@+id/action_videoModeFragment_to_playerFragment"
             app:destination="@id/playerFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"

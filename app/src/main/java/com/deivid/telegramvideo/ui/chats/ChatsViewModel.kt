@@ -39,23 +39,35 @@ class ChatsViewModel @Inject constructor(
     }
 
     /**
-     * Carrega a lista de chats do usuário.
+     * Carrega a lista de chats do usuário com timeout.
      */
     fun loadChats() {
         viewModelScope.launch {
             _uiState.value = ChatsUiState.Loading
-            val result = repository.getChats()
-            result.fold(
-                onSuccess = { chats ->
-                    allChats = chats
-                    _uiState.value = ChatsUiState.Success(chats)
-                },
-                onFailure = { exception ->
-                    _uiState.value = ChatsUiState.Error(
-                        exception.message ?: "Erro ao carregar conversas"
-                    )
+
+            try {
+                val result = kotlinx.coroutines.withTimeoutOrNull(20000) {
+                    repository.getChats()
                 }
-            )
+
+                if (result != null) {
+                    result.fold(
+                        onSuccess = { chats ->
+                            allChats = chats
+                            _uiState.value = ChatsUiState.Success(chats)
+                        },
+                        onFailure = { exception ->
+                            _uiState.value = ChatsUiState.Error(
+                                exception.message ?: "Erro ao carregar conversas"
+                            )
+                        }
+                    )
+                } else {
+                    _uiState.value = ChatsUiState.Error("Tempo limite atingido ao carregar conversas.")
+                }
+            } catch (e: Exception) {
+                _uiState.value = ChatsUiState.Error("Erro inesperado: ${e.message}")
+            }
         }
     }
 

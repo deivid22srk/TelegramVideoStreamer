@@ -54,7 +54,7 @@ class TelegramRepository @Inject constructor(
         chatId: Long,
         fromMessageId: Long = 0
     ): Result<List<VideoItem>> {
-        return telegramClient.getVideoMessages(chatId, fromMessageId).map { messages ->
+        return telegramClient.getVideos(chatId, fromMessageId).map { messages ->
             messages.mapNotNull { message ->
                 (message.content as? TdApi.MessageVideo)?.let { videoContent ->
                     message.toVideoItem(videoContent)
@@ -64,10 +64,16 @@ class TelegramRepository @Inject constructor(
     }
 
     /**
-     * Obtém o arquivo de vídeo para streaming.
+     * Obtém informações de um arquivo.
      */
-    suspend fun getVideoFile(fileId: Int): Result<TdApi.File> =
+    suspend fun getFile(fileId: Int): Result<TdApi.File> =
         telegramClient.getFile(fileId)
+
+    /**
+     * Obtém informações de um arquivo pelo Remote ID.
+     */
+    suspend fun getRemoteFile(remoteFileId: String): Result<TdApi.File> =
+        telegramClient.getRemoteFile(remoteFileId)
 
     /**
      * Inicia o download de um arquivo para streaming.
@@ -83,7 +89,7 @@ class TelegramRepository @Inject constructor(
     /**
      * Verifica se o usuário está autenticado.
      */
-    fun isAuthorized(): Boolean = telegramClient.isAuthorized()
+    fun isAuthorized(): Boolean = telegramClient.authState.value == AuthState.Authorized
 
     // ---- Funções de conversão (extensões privadas) ----
 
@@ -135,7 +141,8 @@ class TelegramRepository @Inject constructor(
             thumbnailPath = video.thumbnail?.file?.local?.path,
             localPath = video.video.local?.path?.takeIf { it.isNotEmpty() },
             isDownloaded = video.video.local?.isDownloadingCompleted ?: false,
-            downloadedSize = video.video.local?.downloadedSize ?: 0
+            downloadedSize = video.video.local?.downloadedSize ?: 0,
+            remoteFileId = video.video.remote.id
         )
     }
 }

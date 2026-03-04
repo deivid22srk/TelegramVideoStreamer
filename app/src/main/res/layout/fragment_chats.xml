@@ -46,4 +46,15 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabVideoMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_movie"
+        app:tint="@color/white"
+        app:backgroundTint="@color/telegram_blue"
+        android:contentDescription="Modo Vídeo" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

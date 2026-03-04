@@ -2,9 +2,14 @@ package com.deivid.telegramvideo.ui.videos
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.widget.SearchView
+import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -15,6 +20,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.deivid.telegramvideo.R
+import com.deivid.telegramvideo.data.model.MovieItem
+import com.deivid.telegramvideo.data.model.VideoItem
 import com.deivid.telegramvideo.databinding.FragmentVideosBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -48,21 +56,62 @@ class VideosFragment : Fragment() {
         requireActivity().title = args.chatTitle
 
         setupRecyclerView()
+        setupMenu()
         setupSwipeRefresh()
         observeUiState()
 
         viewModel.loadVideos(args.chatId)
     }
 
+    private fun setupMenu() {
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.menu_chats, menu)
+                // Remove itens que não fazem sentido aqui
+                menu.findItem(R.id.action_logout)?.isVisible = false
+
+                val searchItem = menu.findItem(R.id.action_search)
+                val searchView = searchItem.actionView as SearchView
+                searchView.queryHint = "Filtrar vídeos…"
+                searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                    override fun onQueryTextSubmit(query: String?): Boolean = false
+                    override fun onQueryTextChange(newText: String?): Boolean {
+                        viewModel.filterVideos(newText ?: "")
+                        return true
+                    }
+                })
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                return when (menuItem.itemId) {
+                    R.id.action_refresh -> {
+                        viewModel.refresh()
+                        true
+                    }
+                    R.id.action_video_mode -> {
+                        findNavController().navigate(R.id.action_videosFragment_to_videoModeFragment)
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+
     private fun setupRecyclerView() {
-        videosAdapter = VideosAdapter { video ->
-            // Navega para o player ao clicar em um vídeo
-            val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
-                videoItem = video,
-                chatTitle = args.chatTitle
-            )
-            findNavController().navigate(action)
-        }
+        videosAdapter = VideosAdapter(
+            onVideoClick = { video ->
+                // Navega para o player ao clicar em um vídeo
+                val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                    videoItem = video,
+                    chatTitle = args.chatTitle
+                )
+                findNavController().navigate(action)
+            },
+            onVideoLongClick = { video ->
+                showAddToVideoModeDialog(video)
+            }
+        )
 
         val gridLayoutManager = GridLayoutManager(requireContext(), 2)
         binding.recyclerViewVideos.layoutManager = gridLayoutManager
@@ -82,6 +131,20 @@ class VideosFragment : Fragment() {
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
+        }
+    }
+
+    private fun showAddToVideoModeDialog(video: VideoItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val remoteFileId = viewModel.getRemoteFileId(video)
+            if (remoteFileId != null) {
+                AddMovieDialog.show(requireContext(), video, remoteFileId) { movie ->
+                    viewModel.addToVideoMode(movie)
+                    Toast.makeText(requireContext(), "Adicionado ao Modo Vídeo!", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Erro ao obter ID do arquivo", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

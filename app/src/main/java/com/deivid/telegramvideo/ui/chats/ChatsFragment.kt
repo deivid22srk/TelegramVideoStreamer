@@ -49,7 +49,14 @@ class ChatsFragment : Fragment() {
         setupRecyclerView()
         setupMenu()
         setupSwipeRefresh()
+        setupFab()
         observeUiState()
+    }
+
+    private fun setupFab() {
+        binding.fabVideoMode.setOnClickListener {
+            findNavController().navigate(R.id.action_chatsFragment_to_videoModeFragment)
+        }
     }
 
     private fun setupRecyclerView() {
@@ -89,6 +96,10 @@ class ChatsFragment : Fragment() {
                     }
                     R.id.action_refresh -> {
                         viewModel.loadChats()
+                        true
+                    }
+                    R.id.action_video_mode -> {
+                        findNavController().navigate(R.id.action_chatsFragment_to_videoModeFragment)
                         true
                     }
                     else -> false

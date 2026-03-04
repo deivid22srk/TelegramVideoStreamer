@@ -20,7 +20,7 @@ import javax.inject.Inject
 sealed class PlayerUiState {
     object Idle : PlayerUiState()
     object Preparing : PlayerUiState()
-    data class Ready(val localPath: String) : PlayerUiState()
+    data class Ready(val localPath: String, val fileId: Int = 0, val fileSize: Long = 0) : PlayerUiState()
     data class Downloading(val progress: Int) : PlayerUiState()
     data class Error(val message: String) : PlayerUiState()
 }
@@ -38,6 +38,7 @@ class PlayerViewModel @Inject constructor(
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var currentVideo: VideoItem? = null
+    private var isReadySent = false
 
     /**
      * Prepara o vídeo para reprodução.
@@ -56,13 +57,20 @@ class PlayerViewModel @Inject constructor(
             }
 
             // Obtém informações atualizadas do arquivo
-            val fileResult = repository.getVideoFile(video.fileId)
+            val fileResult = if (video.fileId != 0) {
+                repository.getFile(video.fileId)
+            } else if (!video.remoteFileId.isNullOrEmpty()) {
+                repository.getRemoteFile(video.remoteFileId)
+            } else {
+                Result.failure(Exception("Nenhuma identificação de arquivo encontrada"))
+            }
+
             fileResult.fold(
                 onSuccess = { file ->
                     when {
                         file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
                             // Arquivo já baixado
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
+                            _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
                         }
                         file.local.isDownloadingActive -> {
                             // Download em andamento - monitora o progresso
@@ -71,11 +79,11 @@ class PlayerViewModel @Inject constructor(
                             } else 0
                             _uiState.value = PlayerUiState.Downloading(progress)
                             // Inicia o streaming progressivo
-                            startProgressiveDownload(video.fileId)
+                            startProgressiveDownload(file.id)
                         }
                         else -> {
                             // Inicia o download para streaming
-                            startProgressiveDownload(video.fileId)
+                            startProgressiveDownload(file.id)
                         }
                     }
                 },
@@ -93,36 +101,44 @@ class PlayerViewModel @Inject constructor(
      * O TDLib suporta streaming nativo - o arquivo pode ser reproduzido
      * enquanto ainda está sendo baixado.
      */
-    private suspend fun startProgressiveDownload(fileId: Int) {
-        try {
-            repository.downloadFile(fileId).collect { file ->
-                when {
-                    file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
-                        _uiState.value = PlayerUiState.Ready(file.local.path)
-                    }
-                    file.local.isDownloadingActive -> {
-                        val progress = if (file.size > 0) {
-                            ((file.local.downloadedSize * 100) / file.size).toInt()
-                        } else 0
+    private fun startProgressiveDownload(fileId: Int) {
+        isReadySent = false
+        viewModelScope.launch {
+            try {
+                repository.downloadFile(fileId).collect { file ->
+                    val progress = if (file.size > 0) {
+                        ((file.local.downloadedSize * 100) / file.size).toInt()
+                    } else 0
 
-                        // Inicia a reprodução assim que tiver dados suficientes (>5%)
-                        if (progress >= 5 && file.local.path.isNotEmpty()) {
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
-                        } else {
-                            _uiState.value = PlayerUiState.Downloading(progress)
+                    when {
+                        file.local.isDownloadingCompleted && file.local.path.isNotEmpty() -> {
+                            if (!isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
+                            }
                         }
-                    }
-                    else -> {
-                        if (file.local.path.isNotEmpty()) {
-                            _uiState.value = PlayerUiState.Ready(file.local.path)
+                        file.local.isDownloadingActive -> {
+                            // Inicia a reprodução assim que tiver dados iniciais (>= 1%)
+                            if (progress >= 1 && file.local.path.isNotEmpty() && !isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
+                            } else if (!isReadySent) {
+                                _uiState.value = PlayerUiState.Downloading(progress)
+                            }
+                        }
+                        else -> {
+                            if (file.local.path.isNotEmpty() && !isReadySent) {
+                                isReadySent = true
+                                _uiState.value = PlayerUiState.Ready(file.local.path, file.id, file.size.toLong())
+                            }
                         }
                     }
                 }
+            } catch (e: Exception) {
+                _uiState.value = PlayerUiState.Error(
+                    e.message ?: "Erro durante o download do vídeo"
+                )
             }
-        } catch (e: Exception) {
-            _uiState.value = PlayerUiState.Error(
-                e.message ?: "Erro durante o download do vídeo"
-            )
         }
     }
 
