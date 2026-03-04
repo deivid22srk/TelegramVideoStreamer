@@ -70,6 +70,12 @@ class TelegramRepository @Inject constructor(
         telegramClient.getFile(fileId)
 
     /**
+     * Obtém informações de um arquivo pelo Remote ID.
+     */
+    suspend fun getRemoteFile(remoteFileId: String): Result<TdApi.File> =
+        telegramClient.getRemoteFile(remoteFileId)
+
+    /**
      * Inicia o download de um arquivo para streaming.
      */
     suspend fun downloadFile(fileId: Int) =
@@ -135,7 +141,8 @@ class TelegramRepository @Inject constructor(
             thumbnailPath = video.thumbnail?.file?.local?.path,
             localPath = video.video.local?.path?.takeIf { it.isNotEmpty() },
             isDownloaded = video.video.local?.isDownloadingCompleted ?: false,
-            downloadedSize = video.video.local?.downloadedSize ?: 0
+            downloadedSize = video.video.local?.downloadedSize ?: 0,
+            remoteFileId = video.video.remote.id
         )
     }
 }

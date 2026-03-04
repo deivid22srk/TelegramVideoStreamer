@@ -57,7 +57,14 @@ class PlayerViewModel @Inject constructor(
             }
 
             // Obtém informações atualizadas do arquivo
-            val fileResult = repository.getFile(video.fileId)
+            val fileResult = if (video.fileId != 0) {
+                repository.getFile(video.fileId)
+            } else if (!video.remoteFileId.isNullOrEmpty()) {
+                repository.getRemoteFile(video.remoteFileId)
+            } else {
+                Result.failure(Exception("Nenhuma identificação de arquivo encontrada"))
+            }
+
             fileResult.fold(
                 onSuccess = { file ->
                     when {
@@ -72,11 +79,11 @@ class PlayerViewModel @Inject constructor(
                             } else 0
                             _uiState.value = PlayerUiState.Downloading(progress)
                             // Inicia o streaming progressivo
-                            startProgressiveDownload(video.fileId)
+                            startProgressiveDownload(file.id)
                         }
                         else -> {
                             // Inicia o download para streaming
-                            startProgressiveDownload(video.fileId)
+                            startProgressiveDownload(file.id)
                         }
                     }
                 },

@@ -18,7 +18,8 @@ import java.io.File
  * Adapter para a grade de vídeos usando ListAdapter com DiffUtil.
  */
 class VideosAdapter(
-    private val onVideoClick: (VideoItem) -> Unit
+    private val onVideoClick: (VideoItem) -> Unit,
+    private val onVideoLongClick: (VideoItem) -> Unit
 ) : ListAdapter<VideoItem, VideosAdapter.VideoViewHolder>(VideoDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VideoViewHolder {
@@ -75,6 +76,10 @@ class VideosAdapter(
             }
 
             binding.root.setOnClickListener { onVideoClick(video) }
+            binding.root.setOnLongClickListener {
+                onVideoLongClick(video)
+                true
+            }
         }
     }
 

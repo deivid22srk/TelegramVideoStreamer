@@ -23,7 +23,8 @@ data class VideoItem(
     val thumbnailPath: String?,
     val localPath: String?,      // caminho local se já baixado
     val isDownloaded: Boolean,
-    val downloadedSize: Long
+    val downloadedSize: Long,
+    val remoteFileId: String? = null
 ) : Parcelable {
 
     /**

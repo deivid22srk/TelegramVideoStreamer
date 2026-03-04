@@ -2,13 +2,16 @@ package com.deivid.telegramvideo.ui.videos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deivid.telegramvideo.data.model.MovieItem
 import com.deivid.telegramvideo.data.model.VideoItem
 import com.deivid.telegramvideo.data.repository.TelegramRepository
+import com.deivid.telegramvideo.data.repository.VideoModeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.drinkless.tdlib.TdApi
 import javax.inject.Inject
 
 /**
@@ -26,7 +29,8 @@ sealed class VideosUiState {
  */
 @HiltViewModel
 class VideosViewModel @Inject constructor(
-    private val repository: TelegramRepository
+    private val repository: TelegramRepository,
+    private val videoModeRepository: VideoModeRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<VideosUiState>(VideosUiState.Loading)
@@ -89,5 +93,21 @@ class VideosViewModel @Inject constructor(
      */
     fun refresh() {
         loadVideos(currentChatId)
+    }
+
+    /**
+     * Adiciona um vídeo ao Modo Vídeo.
+     */
+    fun addToVideoMode(movie: MovieItem) {
+        viewModelScope.launch {
+            videoModeRepository.addMovie(movie)
+        }
+    }
+
+    /**
+     * Obtém o remoteFileId para um vídeo (necessário para o MovieItem).
+     */
+    suspend fun getRemoteFileId(video: VideoItem): String? {
+        return repository.getFile(video.fileId).getOrNull()?.remote?.id
     }
 }

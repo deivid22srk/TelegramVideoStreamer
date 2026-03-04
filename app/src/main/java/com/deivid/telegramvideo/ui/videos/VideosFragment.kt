@@ -15,6 +15,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.deivid.telegramvideo.data.model.MovieItem
+import com.deivid.telegramvideo.data.model.VideoItem
 import com.deivid.telegramvideo.databinding.FragmentVideosBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -55,14 +57,19 @@ class VideosFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        videosAdapter = VideosAdapter { video ->
-            // Navega para o player ao clicar em um vídeo
-            val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
-                videoItem = video,
-                chatTitle = args.chatTitle
-            )
-            findNavController().navigate(action)
-        }
+        videosAdapter = VideosAdapter(
+            onVideoClick = { video ->
+                // Navega para o player ao clicar em um vídeo
+                val action = VideosFragmentDirections.actionVideosFragmentToPlayerFragment(
+                    videoItem = video,
+                    chatTitle = args.chatTitle
+                )
+                findNavController().navigate(action)
+            },
+            onVideoLongClick = { video ->
+                showAddToVideoModeDialog(video)
+            }
+        )
 
         val gridLayoutManager = GridLayoutManager(requireContext(), 2)
         binding.recyclerViewVideos.layoutManager = gridLayoutManager
@@ -82,6 +89,20 @@ class VideosFragment : Fragment() {
     private fun setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refresh()
+        }
+    }
+
+    private fun showAddToVideoModeDialog(video: VideoItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val remoteFileId = viewModel.getRemoteFileId(video)
+            if (remoteFileId != null) {
+                AddMovieDialog.show(requireContext(), video, remoteFileId) { movie ->
+                    viewModel.addToVideoMode(movie)
+                    Toast.makeText(requireContext(), "Adicionado ao Modo Vídeo!", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Erro ao obter ID do arquivo", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

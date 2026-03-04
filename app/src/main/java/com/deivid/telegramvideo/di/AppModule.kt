@@ -3,6 +3,7 @@ package com.deivid.telegramvideo.di
 import android.content.Context
 import com.deivid.telegramvideo.data.repository.TelegramClient
 import com.deivid.telegramvideo.data.repository.TelegramRepository
+import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,4 +29,8 @@ object AppModule {
     fun provideTelegramRepository(
         telegramClient: TelegramClient
     ): TelegramRepository = TelegramRepository(telegramClient)
+
+    @Provides
+    @Singleton
+    fun provideGson(): Gson = Gson()
 }
