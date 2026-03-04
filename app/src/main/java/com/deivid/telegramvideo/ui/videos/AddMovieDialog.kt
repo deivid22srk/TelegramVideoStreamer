@@ -18,11 +18,23 @@ object AddMovieDialog {
         context: Context,
         video: VideoItem,
         remoteFileId: String,
+        existingMovie: MovieItem? = null,
         onConfirm: (MovieItem) -> Unit
     ) {
         val binding = DialogAddMovieBinding.inflate(LayoutInflater.from(context))
 
-        binding.etTitle.setText(video.fileName)
+        if (existingMovie != null) {
+            binding.etTitle.setText(existingMovie.title)
+            binding.etSynopsis.setText(existingMovie.synopsis)
+            binding.etCoverUrl.setText(existingMovie.coverUrl)
+            binding.cbIsSeries.isChecked = existingMovie.isSeries
+            binding.layoutSeriesInfo.isVisible = existingMovie.isSeries
+            binding.etSeriesTitle.setText(existingMovie.seriesTitle)
+            binding.etSeason.setText(existingMovie.season?.toString() ?: "")
+            binding.etEpisode.setText(existingMovie.episode?.toString() ?: "")
+        } else {
+            binding.etTitle.setText(video.fileName)
+        }
 
         binding.cbIsSeries.setOnCheckedChangeListener { _, isChecked ->
             binding.layoutSeriesInfo.isVisible = isChecked
@@ -30,15 +42,16 @@ object AddMovieDialog {
 
         AlertDialog.Builder(context)
             .setView(binding.root)
-            .setPositiveButton("Adicionar") { _, _ ->
+            .setTitle(if (existingMovie != null) "Editar Item" else "Adicionar ao Modo Vídeo")
+            .setPositiveButton(if (existingMovie != null) "Salvar" else "Adicionar") { _, _ ->
                 val title = binding.etTitle.text.toString()
                 val synopsis = binding.etSynopsis.text.toString()
                 val coverUrl = binding.etCoverUrl.text.toString().takeIf { it.isNotEmpty() }
                 val isSeries = binding.cbIsSeries.isChecked
 
                 val movie = MovieItem(
-                    id = UUID.randomUUID().toString(),
-                    messageId = 0L,
+                    id = existingMovie?.id ?: UUID.randomUUID().toString(),
+                    messageId = existingMovie?.messageId ?: 0L,
                     title = title,
                     synopsis = synopsis,
                     coverUrl = coverUrl,

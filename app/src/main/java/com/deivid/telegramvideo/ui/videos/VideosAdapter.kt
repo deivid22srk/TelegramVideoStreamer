@@ -19,8 +19,24 @@ import java.io.File
  */
 class VideosAdapter(
     private val onVideoClick: (VideoItem) -> Unit,
-    private val onVideoLongClick: (VideoItem) -> Unit
+    private val onVideoLongClick: (VideoItem) -> Unit,
+    private val onSelectionChanged: (Int) -> Unit
 ) : ListAdapter<VideoItem, VideosAdapter.VideoViewHolder>(VideoDiffCallback()) {
+
+    private val selectedItems = mutableSetOf<Long>()
+    var isSelectionMode = false
+        private set
+
+    fun clearSelection() {
+        selectedItems.clear()
+        isSelectionMode = false
+        notifyDataSetChanged()
+        onSelectionChanged(0)
+    }
+
+    fun getSelectedVideos(): List<VideoItem> {
+        return currentList.filter { selectedItems.contains(it.messageId) }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VideoViewHolder {
         val binding = ItemVideoBinding.inflate(
@@ -68,18 +84,46 @@ class VideosAdapter(
                 binding.ivThumbnail.setImageResource(R.drawable.ic_video_placeholder)
             }
 
-            // Indicador de download
-            if (video.isDownloaded) {
-                binding.ivDownloaded.isVisible = true
+            // Indicador de download e seleção
+            val isSelected = selectedItems.contains(video.messageId)
+            binding.ivDownloaded.isVisible = video.isDownloaded || isSelected
+            if (isSelected) {
+                binding.ivDownloaded.setImageResource(R.drawable.ic_check_circle)
+                binding.viewOverlay.isVisible = true
+                binding.viewOverlay.setBackgroundColor(0x809911FF.toInt())
             } else {
-                binding.ivDownloaded.isVisible = false
+                binding.ivDownloaded.setImageResource(R.drawable.ic_check_circle)
+                binding.viewOverlay.isVisible = false
             }
 
-            binding.root.setOnClickListener { onVideoClick(video) }
-            binding.root.setOnLongClickListener {
-                onVideoLongClick(video)
-                true
+            binding.root.setOnClickListener {
+                if (isSelectionMode) {
+                    toggleSelection(video.messageId)
+                } else {
+                    onVideoClick(video)
+                }
             }
+            binding.root.setOnLongClickListener {
+                if (!isSelectionMode) {
+                    isSelectionMode = true
+                    toggleSelection(video.messageId)
+                    true
+                } else {
+                    onVideoLongClick(video)
+                    true
+                }
+            }
+        }
+
+        private fun toggleSelection(messageId: Long) {
+            if (selectedItems.contains(messageId)) {
+                selectedItems.remove(messageId)
+            } else {
+                selectedItems.add(messageId)
+            }
+            if (selectedItems.isEmpty()) isSelectionMode = false
+            notifyItemChanged(adapterPosition)
+            onSelectionChanged(selectedItems.size)
         }
     }
 

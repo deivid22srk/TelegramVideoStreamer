@@ -36,14 +36,16 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
 
-        // Oculta a toolbar na tela de login
+        // Oculta a toolbar na tela de login e player
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.loginFragment, R.id.codeFragment, R.id.passwordFragment -> {
+                R.id.loginFragment, R.id.codeFragment, R.id.passwordFragment, R.id.playerFragment -> {
                     supportActionBar?.hide()
+                    binding.appBarLayout.visibility = android.view.View.GONE
                 }
                 else -> {
                     supportActionBar?.show()
+                    binding.appBarLayout.visibility = android.view.View.VISIBLE
                 }
             }
         }

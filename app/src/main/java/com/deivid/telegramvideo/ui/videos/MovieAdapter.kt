@@ -18,7 +18,8 @@ import com.deivid.telegramvideo.util.DurationFormatter
  */
 class MovieAdapter(
     private val onMovieClick: (MovieItem) -> Unit,
-    private val onMovieDelete: (MovieItem) -> Unit
+    private val onMovieDelete: (MovieItem) -> Unit,
+    private val onMovieEdit: (MovieItem) -> Unit
 ) : ListAdapter<VideoLibraryItem, RecyclerView.ViewHolder>(VideoLibraryDiffCallback()) {
 
     companion object {
@@ -57,8 +58,9 @@ class MovieAdapter(
             (itemView as android.widget.TextView).apply {
                 text = header.title
                 setTypeface(null, android.graphics.Typeface.BOLD)
-                textSize = 16f
-                setPadding(16, 16, 16, 16)
+                textSize = 18f
+                setTextColor(android.graphics.Color.WHITE)
+                setPadding(16, 48, 16, 16)
             }
         }
     }
@@ -89,6 +91,10 @@ class MovieAdapter(
             binding.btnDelete.isVisible = true
             binding.btnDelete.setOnClickListener { onMovieDelete(movie) }
             binding.root.setOnClickListener { onMovieClick(movie) }
+            binding.root.setOnLongClickListener {
+                onMovieEdit(movie)
+                true
+            }
         }
     }
 

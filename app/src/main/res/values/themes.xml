@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.TelegramVideoStreamer" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/telegram_blue</item>
-        <item name="colorPrimaryVariant">@color/telegram_dark_blue</item>
+        <item name="colorPrimary">@color/hbo_purple</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/telegram_light_blue</item>
+        <item name="colorSecondary">@color/hbo_purple</item>
         <item name="colorOnSecondary">@color/white</item>
-        <item name="android:statusBarColor">@color/telegram_dark_blue</item>
-        <item name="android:navigationBarColor">@color/background</item>
+        <item name="android:statusBarColor">@color/hbo_black</item>
+        <item name="android:navigationBarColor">@color/hbo_black</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_secondary</item>
     </style>
 
     <style name="Theme.TelegramVideoStreamer.Splash" parent="Theme.TelegramVideoStreamer">

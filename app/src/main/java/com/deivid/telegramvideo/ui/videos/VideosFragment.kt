@@ -66,6 +66,15 @@ class VideosFragment : Fragment() {
     private fun setupMenu() {
         requireActivity().addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                if (videosAdapter.isSelectionMode) {
+                    menu.add(Menu.NONE, 100, Menu.NONE, "Adicionar à Série")
+                        .setIcon(R.drawable.ic_movie)
+                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+                    menu.add(Menu.NONE, 101, Menu.NONE, "Cancelar")
+                        .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+                    return
+                }
+
                 menuInflater.inflate(R.menu.menu_chats, menu)
                 // Remove itens que não fazem sentido aqui
                 menu.findItem(R.id.action_logout)?.isVisible = false
@@ -84,6 +93,14 @@ class VideosFragment : Fragment() {
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 return when (menuItem.itemId) {
+                    100 -> {
+                        showAddSelectionToSeriesDialog()
+                        true
+                    }
+                    101 -> {
+                        videosAdapter.clearSelection()
+                        true
+                    }
                     R.id.action_refresh -> {
                         viewModel.refresh()
                         true
@@ -110,6 +127,14 @@ class VideosFragment : Fragment() {
             },
             onVideoLongClick = { video ->
                 showAddToVideoModeDialog(video)
+            },
+            onSelectionChanged = { count ->
+                requireActivity().invalidateOptionsMenu()
+                if (count > 0) {
+                    requireActivity().title = "$count selecionados"
+                } else {
+                    requireActivity().title = args.chatTitle
+                }
             }
         )
 
@@ -141,6 +166,42 @@ class VideosFragment : Fragment() {
                 AddMovieDialog.show(requireContext(), video, remoteFileId) { movie ->
                     viewModel.addToVideoMode(movie)
                     Toast.makeText(requireContext(), "Adicionado ao Modo Vídeo!", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Erro ao obter ID do arquivo", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showAddSelectionToSeriesDialog() {
+        val selectedVideos = videosAdapter.getSelectedVideos()
+        if (selectedVideos.isEmpty()) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val video = selectedVideos.first()
+            val remoteFileId = viewModel.getRemoteFileId(video)
+            if (remoteFileId != null) {
+                AddMovieDialog.show(requireContext(), video, remoteFileId) { baseMovie ->
+                    lifecycleScope.launch {
+                        val seriesId = java.util.UUID.randomUUID().toString()
+                        selectedVideos.forEachIndexed { index, selectedVideo ->
+                            val rId = viewModel.getRemoteFileId(selectedVideo) ?: ""
+                            val movie = baseMovie.copy(
+                                id = java.util.UUID.randomUUID().toString(),
+                                seriesId = seriesId,
+                                title = "${baseMovie.title} - E${(baseMovie.episode ?: 1) + index}",
+                                episode = (baseMovie.episode ?: 1) + index,
+                                remoteFileId = rId,
+                                fileName = selectedVideo.fileName,
+                                duration = selectedVideo.duration,
+                                fileSize = selectedVideo.fileSize,
+                                messageId = 0L
+                            )
+                            viewModel.addToVideoMode(movie)
+                        }
+                        videosAdapter.clearSelection()
+                        Toast.makeText(requireContext(), "Episódios adicionados!", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } else {
                 Toast.makeText(requireContext(), "Erro ao obter ID do arquivo", Toast.LENGTH_SHORT).show()

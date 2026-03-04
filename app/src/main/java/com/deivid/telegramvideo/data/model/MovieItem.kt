@@ -14,6 +14,7 @@ data class MovieItem(
     val synopsis: String,
     val coverUrl: String?,
     val isSeries: Boolean,
+    val seriesId: String? = null,
     val seriesTitle: String?,
     val season: Int?,
     val episode: Int?,
