@@ -15,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import com.deivid.telegramvideo.ui.videos.VideoModeFragmentDirections
+import com.deivid.telegramvideo.R
 import com.deivid.telegramvideo.data.model.MovieItem
 import com.deivid.telegramvideo.data.repository.TelegramRepository
 import com.deivid.telegramvideo.data.repository.VideoModeRepository
@@ -47,14 +48,6 @@ class VideoModeFragment : Fragment() {
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
-        setupClickListeners()
-        observeState()
-
-        checkStorageAndLoad()
-    }
 
     private fun setupRecyclerView() {
         categoryAdapter = CategoryAdapter(
@@ -112,6 +105,39 @@ class VideoModeFragment : Fragment() {
     private fun setupClickListeners() {
         binding.btnSelectStorage.setOnClickListener {
             showChatSelectionDialog()
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupRecyclerView()
+        setupClickListeners()
+        observeState()
+
+        checkStorageAndLoad()
+
+        // Listener para o menu de backup
+        requireActivity().addMenuProvider(object : androidx.core.view.MenuProvider {
+            override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {}
+            override fun onMenuItemSelected(menuItem: android.view.MenuItem): Boolean {
+                if (menuItem.itemId == R.id.action_backup) {
+                    performBackup()
+                    return true
+                }
+                return false
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+
+    private fun performBackup() {
+        lifecycleScope.launch {
+            binding.progressBar.isVisible = true
+            val result = videoModeRepository.createAndUploadBackup()
+            binding.progressBar.isVisible = false
+            result.fold(
+                onSuccess = { Toast.makeText(requireContext(), "Backup ZIP enviado!", Toast.LENGTH_SHORT).show() },
+                onFailure = { Toast.makeText(requireContext(), "Erro no backup: ${it.message}", Toast.LENGTH_SHORT).show() }
+            )
         }
     }
 

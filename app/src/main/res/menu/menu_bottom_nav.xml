@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/chatsFragment"
+        android:icon="@drawable/ic_search"
+        android:title="Buscar" />
+    <item
+        android:id="@+id/videoModeFragment"
+        android:icon="@drawable/ic_movie"
+        android:title="Início" />
+    <item
+        android:id="@+id/action_backup"
+        android:icon="@drawable/ic_refresh"
+        android:title="Backup" />
+</menu>

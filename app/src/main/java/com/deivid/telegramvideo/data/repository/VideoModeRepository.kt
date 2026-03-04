@@ -3,7 +3,9 @@ package com.deivid.telegramvideo.data.repository
 import android.content.Context
 import com.deivid.telegramvideo.data.model.MovieData
 import com.deivid.telegramvideo.data.model.MovieItem
+import com.deivid.telegramvideo.util.BackupManager
 import com.google.gson.Gson
+import java.io.File
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,39 @@ class VideoModeRepository @Inject constructor(
     private val telegramClient: TelegramClient,
     private val gson: Gson
 ) {
+    private val backupManager = BackupManager(context, gson)
+
+    suspend fun createAndUploadBackup(): Result<Unit> {
+        val chatId = _storageChatId.value
+        if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))
+
+        val moviesList = _movies.value
+        val zipFile = backupManager.createBackupZip(moviesList) ?: return Result.failure(Exception("Falha ao criar ZIP"))
+
+        return telegramClient.sendDocument(chatId, zipFile.absolutePath, "VIDEO_MODE_BACKUP_ZIP")
+            .map { Unit }
+    }
+
+    suspend fun restoreFromBackupZip(fileId: Int): Result<Unit> {
+        val chatId = _storageChatId.value
+        if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))
+
+        try {
+            telegramClient.downloadFile(fileId).collect { file ->
+                if (file.local.isDownloadingCompleted && file.local.path.isNotEmpty()) {
+                    val zipFile = File(file.local.path)
+                    val extractedJson = backupManager.extractJsonFromZip(zipFile)
+                    if (extractedJson != null) {
+                        val movies = gson.fromJson(extractedJson, Array<MovieItem>::class.java).toList()
+                        _movies.value = movies
+                    }
+                }
+            }
+            return Result.success(Unit)
+        } catch (e: Exception) {
+            return Result.failure(e)
+        }
+    }
     private val prefs = context.getSharedPreferences("video_mode_prefs", Context.MODE_PRIVATE)
 
     private val _storageChatId = MutableStateFlow(prefs.getLong("storage_chat_id", 0L))

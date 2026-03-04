@@ -319,4 +319,18 @@ class TelegramClient @Inject constructor(
                 }
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
+
+    suspend fun sendDocument(chatId: Long, filePath: String, caption: String): Result<TdApi.Message> =
+        suspendCancellableCoroutine { continuation ->
+            val content = TdApi.InputMessageDocument(
+                TdApi.InputFileLocal(filePath),
+                null,
+                false,
+                TdApi.FormattedText(caption, null)
+            )
+            client?.send(TdApi.SendMessage(chatId, null, null, null, null, content)) { result ->
+                if (result is TdApi.Message) continuation.resume(Result.success(result))
+                else continuation.resume(Result.failure(Exception(if (result is TdApi.Error) result.message else "Erro ao enviar documento")))
+            } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
+        }
 }

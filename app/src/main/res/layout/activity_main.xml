@@ -31,4 +31,15 @@
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph" />
 
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:visibility="gone"
+        app:backgroundTint="@color/hbo_black"
+        app:itemIconTint="@color/on_surface_secondary"
+        app:itemTextColor="@color/on_surface_secondary"
+        app:menu="@menu/menu_bottom_nav" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
