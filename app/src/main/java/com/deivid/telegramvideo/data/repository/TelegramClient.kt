@@ -180,28 +180,50 @@ class TelegramClient @Inject constructor(
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
 
-    suspend fun loadChats(limit: Int = 50): Result<List<TdApi.Chat>> =
+    suspend fun loadChats(limit: Int = 100): Result<List<TdApi.Chat>> =
         suspendCancellableCoroutine { continuation ->
-            client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { result ->
-                if (result is TdApi.Ok || result is TdApi.Error) {
-                    client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
-                        if (chatsResult is TdApi.Chats) {
-                            val chats = mutableListOf<TdApi.Chat>()
-                            var remaining = chatsResult.chatIds.size
-                            if (remaining == 0) { continuation.resume(Result.success(emptyList())); return@send }
-                            chatsResult.chatIds.forEach { id ->
-                                client?.send(TdApi.GetChat(id)) { chat ->
-                                    if (chat is TdApi.Chat) synchronized(chats) { chats.add(chat) }
-                                    if (java.util.concurrent.atomic.AtomicInteger(remaining).decrementAndGet() == 0) {
-                                        continuation.resume(Result.success(chats.sortedByDescending { it.lastMessage?.date ?: 0 }))
-                                    }
-                                }
+            // Tenta obter os chats que já estão no cache local primeiro
+            client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
+                if (chatsResult is TdApi.Chats && chatsResult.chatIds.isNotEmpty()) {
+                    resolveChatIds(chatsResult.chatIds.toList(), continuation)
+                } else {
+                    // Se não houver chats no cache, solicita o carregamento ao TDLib
+                    client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { loadResult ->
+                        // Após tentar carregar, buscamos novamente a lista de IDs
+                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { finalResult ->
+                            if (finalResult is TdApi.Chats) {
+                                resolveChatIds(finalResult.chatIds.toList(), continuation)
+                            } else {
+                                if (continuation.isActive) continuation.resume(Result.success(emptyList()))
                             }
-                        } else continuation.resume(Result.success(emptyList()))
+                        }
                     }
-                } else continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                }
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
+
+    private fun resolveChatIds(chatIds: List<Long>, continuation: kotlinx.coroutines.CancellableContinuation<Result<List<TdApi.Chat>>>) {
+        if (chatIds.isEmpty()) {
+            if (continuation.isActive) continuation.resume(Result.success(emptyList()))
+            return
+        }
+
+        val chats = mutableListOf<TdApi.Chat>()
+        val count = java.util.concurrent.atomic.AtomicInteger(chatIds.size)
+
+        chatIds.forEach { id ->
+            client?.send(TdApi.GetChat(id)) { chat ->
+                if (chat is TdApi.Chat) {
+                    synchronized(chats) { chats.add(chat) }
+                }
+                if (count.decrementAndGet() == 0) {
+                    if (continuation.isActive) {
+                        continuation.resume(Result.success(chats.sortedByDescending { it.lastMessage?.date ?: 0 }))
+                    }
+                }
+            }
+        }
+    }
 
     suspend fun deleteMessages(chatId: Long, messageIds: LongArray, revoke: Boolean = true): Result<Unit> =
         suspendCancellableCoroutine { continuation ->

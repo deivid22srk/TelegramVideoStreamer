@@ -38,6 +38,7 @@ object AddMovieDialog {
 
                 val movie = MovieItem(
                     id = UUID.randomUUID().toString(),
+                    messageId = 0L,
                     title = title,
                     synopsis = synopsis,
                     coverUrl = coverUrl,
