@@ -48,38 +48,44 @@ class TdLibDataSource(
 
         val bytesToRead = min(bytesRemaining, length.toLong()).toInt()
 
-        return try {
-            // Usamos runBlocking aqui pois o DataSource do ExoPlayer é síncrono
-            val result = runBlocking {
-                telegramClient.readFilePart(fileId, currentPosition, bytesToRead.toLong())
-            }
+        var retryCount = 0
+        val maxRetries = 5
 
-            result.fold(
-                onSuccess = { obj ->
-                    // Attempt to access data via reflection if it's not visible
-                    try {
-                        val dataField = obj.javaClass.getField("data")
-                        val data = dataField.get(obj) as ByteArray
-                        if (data.isEmpty()) {
-                            0
-                        } else {
-                            val bytesActuallyRead = data.size
-                            System.arraycopy(data, 0, buffer, offset, bytesActuallyRead)
-                            currentPosition += bytesActuallyRead.toLong()
-                            bytesRemaining -= bytesActuallyRead.toLong()
-                            bytesActuallyRead
-                        }
-                    } catch (e: Exception) {
-                        -1
-                    }
-                },
-                onFailure = {
-                    -1
+        while (retryCount < maxRetries) {
+            try {
+                // Usamos runBlocking aqui pois o DataSource do ExoPlayer é síncrono
+                val result = runBlocking {
+                    telegramClient.readFilePart(fileId, currentPosition, bytesToRead.toLong())
                 }
-            )
-        } catch (e: Exception) {
-            -1
+
+                if (result.isSuccess) {
+                    val obj = result.getOrThrow()
+                    // Attempt to access data via reflection if it's not visible
+                    val dataField = obj.javaClass.getField("data")
+                    val data = dataField.get(obj) as ByteArray
+
+                    if (data.isNotEmpty()) {
+                        val bytesActuallyRead = data.size
+                        System.arraycopy(data, 0, buffer, offset, bytesActuallyRead)
+                        currentPosition += bytesActuallyRead.toLong()
+                        bytesRemaining -= bytesActuallyRead.toLong()
+                        return bytesActuallyRead
+                    }
+                }
+
+                // Se falhou ou data está vazio, solicita o download da parte e espera um pouco
+                runBlocking {
+                    telegramClient.requestFilePart(fileId, 32, currentPosition, bytesToRead.toLong())
+                    kotlinx.coroutines.delay(200L * (retryCount + 1))
+                }
+                retryCount++
+
+            } catch (e: Exception) {
+                retryCount++
+            }
         }
+
+        return -1
     }
 
     override fun getUri(): Uri? = uri

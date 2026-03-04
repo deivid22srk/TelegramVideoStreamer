@@ -48,6 +48,20 @@ class VideoModeRepository @Inject constructor(
         }
     }
 
+    suspend fun editMovie(movie: MovieItem): Result<Unit> {
+        val chatId = _storageChatId.value
+        if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))
+        if (movie.messageId == 0L) return Result.failure(Exception("ID de mensagem inválido"))
+
+        val json = gson.toJson(movie)
+        val encodedText = "VIDEO_ITEM_METADATA:$json"
+
+        return telegramClient.editMessageText(chatId, movie.messageId, encodedText).map {
+            restoreMovies()
+            Unit
+        }
+    }
+
     suspend fun deleteMovie(movie: MovieItem): Result<Unit> {
         val chatId = _storageChatId.value
         if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))

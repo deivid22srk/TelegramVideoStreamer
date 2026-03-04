@@ -66,6 +66,9 @@ class VideoModeFragment : Fragment() {
             },
             onMovieDelete = { movie ->
                 showDeleteConfirmDialog(movie)
+            },
+            onMovieEdit = { movie ->
+                showEditDialog(movie)
             }
         )
 
@@ -97,6 +100,20 @@ class VideoModeFragment : Fragment() {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    private fun showEditDialog(movie: MovieItem) {
+        AddMovieDialog.show(
+            context = requireContext(),
+            video = movie.toVideoItem(),
+            remoteFileId = movie.remoteFileId,
+            existingMovie = movie
+        ) { updatedMovie ->
+            lifecycleScope.launch {
+                videoModeRepository.editMovie(updatedMovie)
+                Toast.makeText(requireContext(), "Item atualizado!", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupClickListeners() {
