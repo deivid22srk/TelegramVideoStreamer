@@ -374,7 +374,7 @@ class TelegramClient @Inject constructor(
         suspendCancellableCoroutine { continuation ->
             val formattedText = TdApi.FormattedText(text, emptyArray())
             val content = TdApi.InputMessageText(formattedText, null, false)
-            val request = TdApi.SendMessage(chatId, 0, null, null, null, content)
+            val request = TdApi.SendMessage(chatId, null, null, null, null, content)
             client?.send(request) { result ->
                 when (result) {
                     is TdApi.Message -> continuation.resume(Result.success(Unit))
@@ -391,7 +391,7 @@ class TelegramClient @Inject constructor(
     suspend fun searchTextMessage(chatId: Long, query: String): Result<String> =
         suspendCancellableCoroutine { continuation ->
             val filter = TdApi.SearchMessagesFilterEmpty()
-            val request = TdApi.SearchChatMessages(chatId, query, "", null, 0, 0, 1, filter)
+            val request = TdApi.SearchChatMessages(chatId, query, null, null, 0, 0, 1, filter)
             client?.send(request) { result ->
                 when (result) {
                     is TdApi.FoundChatMessages -> {
