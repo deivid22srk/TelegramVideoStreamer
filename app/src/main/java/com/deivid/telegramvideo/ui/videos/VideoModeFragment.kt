@@ -70,8 +70,16 @@ class VideoModeFragment : Fragment() {
 
         binding.swipeRefresh.setOnRefreshListener {
             lifecycleScope.launch {
-                videoModeRepository.restoreMovies()
+                binding.progressBar.isVisible = true
+                val result = videoModeRepository.restoreMovies()
+                binding.progressBar.isVisible = false
                 binding.swipeRefresh.isRefreshing = false
+
+                result.onSuccess {
+                    Toast.makeText(requireContext(), "Biblioteca atualizada!", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(requireContext(), "Erro ao restaurar: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

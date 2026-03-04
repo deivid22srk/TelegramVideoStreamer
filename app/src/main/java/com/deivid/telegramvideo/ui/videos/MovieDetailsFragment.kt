@@ -51,6 +51,7 @@ class MovieDetailsFragment : Fragment() {
         if (movie.isSeries) {
             setupSeriesUI(movie)
             observeEpisodes(movie)
+            observePickerResult()
         }
     }
 
@@ -78,6 +79,16 @@ class MovieDetailsFragment : Fragment() {
     private fun setupSeriesUI(movie: MovieItem) {
         binding.layoutSeries.isVisible = true
         binding.btnWatchNow.isVisible = false
+
+        binding.btnAddEpisode.setOnClickListener {
+            val action = MovieDetailsFragmentDirections.actionMovieDetailsFragmentToChatsFragment(isPicker = true)
+            findNavController().navigate(action)
+        }
+
+        binding.btnAddEpisode.setOnLongClickListener {
+            addSeason()
+            true
+        }
 
         episodeAdapter = VideosAdapter(
             onVideoClick = { video ->
@@ -130,10 +141,26 @@ class MovieDetailsFragment : Fragment() {
 
     private fun setupTabs(episodes: List<MovieItem>) {
         val maxSeason = episodes.maxOfOrNull { it.season ?: 1 } ?: 1
-        binding.tabLayoutSeasons.removeAllTabs()
-        for (i in 1..maxSeason) {
-            binding.tabLayoutSeasons.addTab(binding.tabLayoutSeasons.newTab().setText("Temporada $i"))
+        val currentTabCount = binding.tabLayoutSeasons.tabCount
+        if (maxSeason > currentTabCount) {
+            for (i in (currentTabCount + 1)..maxSeason) {
+                binding.tabLayoutSeasons.addTab(binding.tabLayoutSeasons.newTab().setText("Temporada $i"))
+            }
+        } else if (maxSeason < currentTabCount && maxSeason > 0) {
+            // Se por algum motivo diminuiu (excluiu episódios), reconstruímos
+            binding.tabLayoutSeasons.removeAllTabs()
+            for (i in 1..maxSeason) {
+                binding.tabLayoutSeasons.addTab(binding.tabLayoutSeasons.newTab().setText("Temporada $i"))
+            }
+        } else if (currentTabCount == 0) {
+            binding.tabLayoutSeasons.addTab(binding.tabLayoutSeasons.newTab().setText("Temporada 1"))
         }
+    }
+
+    private fun addSeason() {
+        val nextSeason = binding.tabLayoutSeasons.tabCount + 1
+        binding.tabLayoutSeasons.addTab(binding.tabLayoutSeasons.newTab().setText("Temporada $nextSeason"), true)
+        android.widget.Toast.makeText(requireContext(), "Temporada $nextSeason criada!", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun updateEpisodesList(season: Int) {
@@ -141,6 +168,54 @@ class MovieDetailsFragment : Fragment() {
             .sortedBy { it.episode ?: 0 }
             .map { it.toVideoItem() }
         episodeAdapter.submitList(seasonEpisodes)
+    }
+
+    private fun observePickerResult() {
+        val movie = args.movieItem
+        val savedStateHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        savedStateHandle?.getLiveData<com.deivid.telegramvideo.data.model.VideoItem>("selected_video")?.observe(viewLifecycleOwner) { video ->
+            val remoteId = savedStateHandle.get<String>("selected_remote_id")
+            if (video != null && remoteId != null) {
+                lifecycleScope.launch {
+                    val currentSeason = binding.tabLayoutSeasons.selectedTabPosition + 1
+                    val maxEpisode = allSeriesEpisodes.filter { it.season == currentSeason }.maxOfOrNull { it.episode ?: 0 } ?: 0
+                    val nextEpisode = maxEpisode + 1
+
+                    val seriesTitle = movie.seriesTitle ?: movie.title
+                    val newEpisode = MovieItem(
+                        id = java.util.UUID.randomUUID().toString(),
+                        title = "$seriesTitle - T$currentSeason E$nextEpisode",
+                        synopsis = movie.synopsis,
+                        coverUrl = movie.coverUrl,
+                        isSeries = true,
+                        seriesId = movie.seriesId ?: movie.id,
+                        seriesTitle = seriesTitle,
+                        season = currentSeason,
+                        episode = nextEpisode,
+                        remoteFileId = remoteId,
+                        fileName = video.fileName,
+                        duration = video.duration,
+                        width = video.width,
+                        height = video.height,
+                        fileSize = video.fileSize,
+                        mimeType = video.mimeType,
+                        caption = video.caption,
+                        date = video.date
+                    )
+
+                    (requireActivity() as? com.deivid.telegramvideo.ui.MainActivity)?.let {
+                        // Idealmente MovieDetailsFragment deveria ter acesso ao repository via Hilt
+                        // ou o ViewModel de VideoMode deveria ter um método addMovie.
+                        // Como estamos usando o ViewModel compartilhado, vamos checar se ele tem o repo.
+                    }
+
+                    viewModel.addMovie(newEpisode)
+                    android.widget.Toast.makeText(requireContext(), "Episódio adicionado!", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                savedStateHandle.remove<com.deivid.telegramvideo.data.model.VideoItem>("selected_video")
+                savedStateHandle.remove<String>("selected_remote_id")
+            }
+        }
     }
 
     override fun onDestroyView() {

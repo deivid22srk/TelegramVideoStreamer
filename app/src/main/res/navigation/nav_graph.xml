@@ -127,6 +127,13 @@
         android:name="com.deivid.telegramvideo.ui.videos.MovieDetailsFragment"
         android:label="Detalhes"
         tools:layout="@layout/fragment_movie_details">
+        <action
+            android:id="@+id/action_movieDetailsFragment_to_chatsFragment"
+            app:destination="@id/chatsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <argument
             android:name="movieItem"
             app:argType="com.deivid.telegramvideo.data.model.MovieItem" />

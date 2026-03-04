@@ -112,6 +112,13 @@ class VideoModeRepository @Inject constructor(
         val chatId = _storageChatId.value
         if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))
 
+        // Primeiro, tentamos restaurar a partir do ZIP mais recente
+        val backupResult = restoreFromLatestBackup()
+        if (backupResult.isSuccess) {
+            return Result.success(_movies.value)
+        }
+
+        // Se não houver backup ZIP ou falhar, caímos para a restauração por mensagens individuais
         return telegramClient.getChatHistory(chatId, limit = 100).map { messages ->
             val items = messages.mapNotNull { message ->
                 val content = message.content
@@ -128,6 +135,25 @@ class VideoModeRepository @Inject constructor(
             }
             _movies.value = items
             items
+        }
+    }
+
+    private suspend fun restoreFromLatestBackup(): Result<Unit> {
+        val chatId = _storageChatId.value
+        if (chatId == 0L) return Result.failure(Exception("Nenhum chat de armazenamento definido"))
+
+        return telegramClient.getChatHistory(chatId, limit = 50).map { messages ->
+            val latestBackup = messages.find { message ->
+                val content = message.content
+                content is TdApi.MessageDocument && content.caption.text == "VIDEO_MODE_BACKUP_ZIP"
+            }
+
+            if (latestBackup != null) {
+                val doc = (latestBackup.content as TdApi.MessageDocument).document
+                restoreFromBackupZip(doc.document.id).getOrThrow()
+            } else {
+                throw Exception("Nenhum backup ZIP encontrado")
+            }
         }
     }
 }
