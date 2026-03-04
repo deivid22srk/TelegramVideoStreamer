@@ -38,16 +38,20 @@ class MainActivity : AppCompatActivity() {
 
         // Oculta a toolbar na tela de login e player
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            val layoutParams = binding.navHostFragment.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
             when (destination.id) {
                 R.id.loginFragment, R.id.codeFragment, R.id.passwordFragment, R.id.playerFragment -> {
                     supportActionBar?.hide()
                     binding.appBarLayout.visibility = android.view.View.GONE
+                    layoutParams.behavior = null
                 }
                 else -> {
                     supportActionBar?.show()
                     binding.appBarLayout.visibility = android.view.View.VISIBLE
+                    layoutParams.behavior = com.google.android.material.appbar.AppBarLayout.ScrollingViewBehavior()
                 }
             }
+            binding.navHostFragment.layoutParams = layoutParams
         }
     }
 

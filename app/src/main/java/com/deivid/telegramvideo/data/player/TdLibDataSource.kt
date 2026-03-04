@@ -73,10 +73,12 @@ class TdLibDataSource(
                     }
                 }
 
-                // Se falhou ou data está vazio, solicita o download da parte e espera um pouco
+                // Se falhou ou data está vazio, solicita o download de uma parte maior e espera um pouco
+                // Solicitamos 2MB para garantir um buffer maior e evitar travamentos após o seek
+                val requestSize = min(2 * 1024 * 1024L, bytesRemaining)
                 runBlocking {
-                    telegramClient.requestFilePart(fileId, 32, currentPosition, bytesToRead.toLong())
-                    kotlinx.coroutines.delay(200L * (retryCount + 1))
+                    telegramClient.requestFilePart(fileId, 32, currentPosition, requestSize)
+                    kotlinx.coroutines.delay(100L * (retryCount + 1))
                 }
                 retryCount++
 
