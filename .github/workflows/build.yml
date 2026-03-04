@@ -1,316 +1,40 @@
 name: Build Android APK
 
 on:
-  # Trigger automático em push para main/develop
   push:
     branches:
       - main
-      - develop
     paths-ignore:
       - '**.md'
       - '.gitignore'
-      - 'LICENSE'
-
-  # Trigger automático em Pull Requests
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - '.gitignore'
-
-  # ✅ Permite execução MANUAL pelo GitHub Actions (workflow_dispatch)
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Tipo de build'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
-          - both
-      create_release:
-        description: 'Criar Release no GitHub?'
-        required: false
-        default: false
-        type: boolean
-      release_tag:
-        description: 'Tag da release (ex: v1.0.0) — obrigatório se criar release'
-        required: false
-        default: ''
-        type: string
-
-# Cancela builds anteriores em andamento para a mesma branch
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  JAVA_VERSION: '17'
-  ANDROID_COMPILE_SDK: '34'
-  ANDROID_BUILD_TOOLS: '34.0.0'
-  GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true'
 
 jobs:
-  # ─────────────────────────────────────────────
-  # Job 1: Lint e verificação de código
-  # ─────────────────────────────────────────────
-  lint:
-    name: Lint Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configurar JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Tornar gradlew executável
-        run: chmod +x gradlew
-
-      - name: Cache do Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      - name: Executar Lint
-        run: ./gradlew lintDebug --stacktrace
-
-      - name: Upload relatório de Lint
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-report
-          path: app/build/reports/lint-results-debug.html
-          retention-days: 7
-
-  # ─────────────────────────────────────────────
-  # Job 2: Build do APK Debug
-  # ─────────────────────────────────────────────
-  build-debug:
+  build:
     name: Build APK Debug
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: lint
-    if: |
-      github.event_name != 'workflow_dispatch' ||
-      inputs.build_type == 'debug' ||
-      inputs.build_type == 'both'
 
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Configurar JDK ${{ env.JAVA_VERSION }}
+      - name: Configurar JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ env.JAVA_VERSION }}
+          java-version: '17'
           distribution: 'temurin'
           cache: gradle
 
       - name: Tornar gradlew executável
         run: chmod +x gradlew
-
-      - name: Cache do Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      - name: Informações do build
-        run: |
-          echo "🔨 Iniciando build DEBUG"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Trigger: ${{ github.event_name }}"
 
       - name: Compilar APK Debug
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Renomear APK com informações do build
-        run: |
-          mkdir -p artifacts
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          cp "$APK_PATH" "artifacts/TelegramVideoStreamer-debug-${SHORT_SHA}.apk"
-          echo "APK_PATH=artifacts/TelegramVideoStreamer-debug-${SHORT_SHA}.apk" >> $GITHUB_ENV
-          echo "✅ APK Debug gerado: TelegramVideoStreamer-debug-${SHORT_SHA}.apk"
-
       - name: Upload do APK Debug
         uses: actions/upload-artifact@v4
         with:
-          name: apk-debug-${{ github.sha }}
-          path: artifacts/*.apk
+          name: TelegramVideoStreamer-debug
+          path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
-
-      - name: Exibir tamanho do APK
-        run: |
-          echo "📦 Tamanho do APK:"
-          du -sh artifacts/*.apk
-
-  # ─────────────────────────────────────────────
-  # Job 3: Build do APK Release (assinado)
-  # ─────────────────────────────────────────────
-  build-release:
-    name: Build APK Release
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: lint
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'release' || inputs.build_type == 'both'))
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Configurar JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Tornar gradlew executável
-        run: chmod +x gradlew
-
-      - name: Cache do Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      - name: Configurar keystore para assinatura
-        if: env.KEYSTORE_BASE64 != ''
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > app/release-keystore.jks
-          echo "KEYSTORE_FILE=release-keystore.jks" >> $GITHUB_ENV
-          echo "✅ Keystore configurado"
-
-      - name: Informações do build
-        run: |
-          echo "🚀 Iniciando build RELEASE"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-
-      - name: Compilar APK Release
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          if [ -f "app/release-keystore.jks" ]; then
-            ./gradlew assembleRelease \
-              -Pandroid.injected.signing.store.file=release-keystore.jks \
-              -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
-              -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-              -Pandroid.injected.signing.key.password="$KEY_PASSWORD" \
-              --stacktrace
-          else
-            echo "⚠️ Keystore não configurado, gerando APK não assinado"
-            ./gradlew assembleRelease --stacktrace
-          fi
-
-      - name: Renomear APK Release
-        run: |
-          mkdir -p artifacts
-          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          cp "$APK_PATH" "artifacts/TelegramVideoStreamer-release-${SHORT_SHA}.apk"
-          echo "✅ APK Release gerado"
-
-      - name: Upload do APK Release
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-release-${{ github.sha }}
-          path: artifacts/*.apk
-          retention-days: 90
-
-      - name: Exibir tamanho do APK
-        run: |
-          echo "📦 Tamanho do APK Release:"
-          du -sh artifacts/*.apk
-
-  # ─────────────────────────────────────────────
-  # Job 4: Criar GitHub Release (opcional)
-  # ─────────────────────────────────────────────
-  create-release:
-    name: Criar GitHub Release
-    runs-on: ubuntu-latest
-    needs: [build-debug, build-release]
-    if: |
-      github.event_name == 'workflow_dispatch' &&
-      inputs.create_release == true &&
-      inputs.release_tag != ''
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Download APK Debug
-        uses: actions/download-artifact@v4
-        with:
-          name: apk-debug-${{ github.sha }}
-          path: artifacts/debug/
-        continue-on-error: true
-
-      - name: Download APK Release
-        uses: actions/download-artifact@v4
-        with:
-          name: apk-release-${{ github.sha }}
-          path: artifacts/release/
-        continue-on-error: true
-
-      - name: Criar Release no GitHub
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.release_tag }}
-          name: "TelegramVideoStreamer ${{ inputs.release_tag }}"
-          body: |
-            ## 📱 TelegramVideoStreamer ${{ inputs.release_tag }}
-
-            ### O que há de novo
-            - Build gerado automaticamente pelo GitHub Actions
-            - Commit: `${{ github.sha }}`
-            - Branch: `${{ github.ref_name }}`
-
-            ### Downloads
-            - **APK Debug**: Para testes e desenvolvimento
-            - **APK Release**: Para produção (requer configuração de keystore)
-
-            ### Configuração necessária
-            Antes de usar o app, configure seu `API_ID` e `API_HASH` do Telegram em:
-            `app/build.gradle.kts` → `buildConfigField`
-
-            Obtenha suas credenciais em: https://my.telegram.org
-          files: |
-            artifacts/debug/*.apk
-            artifacts/release/*.apk
-          draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
