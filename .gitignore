@@ -1,0 +1,49 @@
+### Android ###
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+### Kotlin ###
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+### Gradle ###
+.gradle
+**/build/
+!src/**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+.gradletasknamecache
+
+### Android Studio ###
+*.iws
+*.ipr
+out/
+gen/
+
+### Keystore (NUNCA commitar keystores!) ###
+*.jks
+*.keystore
+release-keystore.jks
+keystore.properties
+
+### Arquivos de configuração local ###
+local.properties
+secrets.properties
+
+### TDLib database (dados locais do usuário) ###
+app/src/main/assets/tdlib/
+tdlib/

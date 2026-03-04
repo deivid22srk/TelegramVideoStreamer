@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Círculo azul de fundo -->
+    <path
+        android:fillColor="#2AABEE"
+        android:pathData="M50,50 m-50,0 a50,50 0 1,0 100,0 a50,50 0 1,0 -100,0" />
+
+    <!-- Avião de papel do Telegram (simplificado) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,50 L75,25 L60,75 L45,60 Z" />
+    <path
+        android:fillColor="#C8E6FA"
+        android:pathData="M45,60 L55,55 L60,75 Z" />
+    <path
+        android:fillColor="#A0D4F5"
+        android:pathData="M45,60 L40,70 L60,75 Z" />
+
+</vector>

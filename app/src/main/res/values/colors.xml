@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="telegram_blue">#2AABEE</color>
+    <color name="telegram_dark_blue">#1A8BC8</color>
+    <color name="telegram_light_blue">#5BC8F5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#212121</color>
+    <color name="on_surface_secondary">#757575</color>
+    <color name="divider">#E0E0E0</color>
+    <color name="error">#B00020</color>
+    <color name="video_overlay">#80000000</color>
+    <color name="badge_background">#FF5722</color>
+</resources>

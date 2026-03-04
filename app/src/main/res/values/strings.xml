@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Telegram Video Streamer</string>
+
+    <!-- Login -->
+    <string name="login_title">Entrar no Telegram</string>
+    <string name="login_subtitle">Digite seu número de telefone com código do país</string>
+    <string name="phone_hint">+55 11 99999-9999</string>
+    <string name="btn_send_code">Enviar Código</string>
+    <string name="code_title">Verificação</string>
+    <string name="code_subtitle">Digite o código enviado pelo Telegram</string>
+    <string name="code_hint">Código de verificação</string>
+    <string name="btn_verify">Verificar</string>
+    <string name="btn_resend_code">Reenviar código</string>
+    <string name="password_title">Senha de dois fatores</string>
+    <string name="password_hint">Senha</string>
+    <string name="btn_confirm_password">Confirmar</string>
+    <string name="loading">Carregando…</string>
+    <string name="error_invalid_phone">Número de telefone inválido</string>
+    <string name="error_invalid_code">Código inválido</string>
+    <string name="error_wrong_password">Senha incorreta</string>
+    <string name="error_network">Erro de conexão. Verifique sua internet.</string>
+
+    <!-- Chats -->
+    <string name="chats_title">Conversas</string>
+    <string name="no_chats">Nenhuma conversa encontrada</string>
+    <string name="search_chats">Pesquisar conversas…</string>
+    <string name="logout">Sair</string>
+    <string name="logout_confirm">Deseja realmente sair?</string>
+    <string name="yes">Sim</string>
+    <string name="no">Não</string>
+
+    <!-- Videos -->
+    <string name="videos_title">Vídeos</string>
+    <string name="no_videos">Nenhum vídeo encontrado neste chat</string>
+    <string name="loading_videos">Carregando vídeos…</string>
+    <string name="video_size">Tamanho: %s</string>
+    <string name="video_duration">Duração: %s</string>
+
+    <!-- Player -->
+    <string name="player_title">Reprodutor</string>
+    <string name="buffering">Carregando vídeo…</string>
+    <string name="error_playback">Erro ao reproduzir o vídeo</string>
+    <string name="retry">Tentar novamente</string>
+    <string name="download">Baixar</string>
+    <string name="share">Compartilhar</string>
+</resources>
