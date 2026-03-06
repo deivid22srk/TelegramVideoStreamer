@@ -46,13 +46,16 @@ class TelegramClient @Inject constructor(
     private var API_ID = 0
     private var API_HASH = ""
 
-    private var client: Client? = null
-
     private val _authState = MutableStateFlow<AuthState>(AuthState.WaitPhoneNumber)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
+
+    val client: Client?
+        get() = _client
+
+    private var _client: Client? = null
 
     init {
         loadCredentials()
@@ -73,7 +76,7 @@ class TelegramClient @Inject constructor(
         try {
             Client.execute(TdApi.SetLogVerbosityLevel(0))
 
-            client = Client.create(
+            _client = Client.create(
                 { update -> handleUpdate(update) },
                 { exception -> Log.e(TAG, "Update exception: ${exception.message}") },
                 { exception -> Log.e(TAG, "Default exception: ${exception.message}") }
@@ -157,7 +160,7 @@ class TelegramClient @Inject constructor(
             this.enableStorageOptimizer = true
         }
 
-        client?.send(parameters) { result ->
+        _client?.send(parameters) { result ->
             if (result is TdApi.Error) {
                 Log.e(TAG, "Error setting TDLib parameters: ${result.message}")
                 _authState.value = AuthState.Error(result.message)
@@ -179,7 +182,7 @@ class TelegramClient @Inject constructor(
                 }
             )
 
-            client?.send(request) { result ->
+            _client?.send(request) { result ->
                 when (result) {
                     is TdApi.Ok -> continuation.resume(Result.success(Unit))
                     is TdApi.Error -> continuation.resume(
@@ -197,7 +200,7 @@ class TelegramClient @Inject constructor(
      */
     suspend fun checkAuthCode(code: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
-            client?.send(TdApi.CheckAuthenticationCode(code)) { result ->
+            _client?.send(TdApi.CheckAuthenticationCode(code)) { result ->
                 when (result) {
                     is TdApi.Ok -> continuation.resume(Result.success(Unit))
                     is TdApi.Error -> continuation.resume(
@@ -215,7 +218,7 @@ class TelegramClient @Inject constructor(
      */
     suspend fun checkAuthPassword(password: String): Result<Unit> =
         suspendCancellableCoroutine { continuation ->
-            client?.send(TdApi.CheckAuthenticationPassword(password)) { result ->
+            _client?.send(TdApi.CheckAuthenticationPassword(password)) { result ->
                 when (result) {
                     is TdApi.Ok -> continuation.resume(Result.success(Unit))
                     is TdApi.Error -> continuation.resume(
@@ -233,10 +236,10 @@ class TelegramClient @Inject constructor(
      */
     suspend fun loadChats(limit: Int = 50): Result<List<TdApi.Chat>> =
         suspendCancellableCoroutine { continuation ->
-            client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { result ->
+            _client?.send(TdApi.LoadChats(TdApi.ChatListMain(), limit)) { result ->
                 when (result) {
                     is TdApi.Ok -> {
-                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
+                        _client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
                             when (chatsResult) {
                                 is TdApi.Chats -> {
                                     val chatIds = chatsResult.chatIds
@@ -249,7 +252,7 @@ class TelegramClient @Inject constructor(
                                     }
 
                                     chatIds.forEach { chatId ->
-                                        client?.send(TdApi.GetChat(chatId)) { chatResult ->
+                                        _client?.send(TdApi.GetChat(chatId)) { chatResult ->
                                             synchronized(chats) {
                                                 if (chatResult is TdApi.Chat) {
                                                     chats.add(chatResult)
@@ -274,7 +277,7 @@ class TelegramClient @Inject constructor(
                         }
                     }
                     is TdApi.Error -> {
-                        client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
+                        _client?.send(TdApi.GetChats(TdApi.ChatListMain(), limit)) { chatsResult ->
                             if (chatsResult is TdApi.Chats) {
                                 // Tenta retornar o que já tem
                                 continuation.resume(Result.success(emptyList()))
@@ -294,7 +297,7 @@ class TelegramClient @Inject constructor(
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
             val filter = TdApi.SearchMessagesFilterVideo()
-            client?.send(TdApi.SearchChatMessages(chatId, "", null, fromMessageId, 0, limit, filter, 0)) { result ->
+            _client?.send(TdApi.SearchChatMessages(chatId, "", null, fromMessageId, 0, limit, filter, 0)) { result ->
                 when (result) {
                     is TdApi.Messages -> continuation.resume(Result.success(result.messages.toList()))
                     is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
@@ -307,7 +310,7 @@ class TelegramClient @Inject constructor(
      * Solicita o download de um arquivo.
      */
     fun downloadFile(fileId: Int, priority: Int = 1): Flow<TdApi.File> = callbackFlow {
-        client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) { result ->
+        _client?.send(TdApi.DownloadFile(fileId, priority, 0, 0, false)) { result ->
             if (result is TdApi.Error) {
                 close(Exception(result.message))
             }
@@ -333,7 +336,7 @@ class TelegramClient @Inject constructor(
      * Encerra a sessão do usuário.
      */
     suspend fun logout(): Result<Unit> = suspendCancellableCoroutine { continuation ->
-        client?.send(TdApi.LogOut()) { result ->
+        _client?.send(TdApi.LogOut()) { result ->
             when (result) {
                 is TdApi.Ok -> continuation.resume(Result.success(Unit))
                 is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))

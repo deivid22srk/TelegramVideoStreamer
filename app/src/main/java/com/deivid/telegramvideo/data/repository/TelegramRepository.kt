@@ -5,7 +5,9 @@ import com.deivid.telegramvideo.data.model.VideoItem
 import com.deivid.telegramvideo.util.FileSizeFormatter
 import com.deivid.telegramvideo.util.DurationFormatter
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.drinkless.tdlib.TdApi
+import kotlin.coroutines.resume
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +56,7 @@ class TelegramRepository @Inject constructor(
         chatId: Long,
         fromMessageId: Long = 0
     ): Result<List<VideoItem>> {
-        return telegramClient.getVideoMessages(chatId, fromMessageId).map { messages ->
+        return telegramClient.getVideos(chatId, fromMessageId).map { messages ->
             messages.mapNotNull { message ->
                 (message.content as? TdApi.MessageVideo)?.let { videoContent ->
                     message.toVideoItem(videoContent)
@@ -67,7 +69,15 @@ class TelegramRepository @Inject constructor(
      * Obtém o arquivo de vídeo para streaming.
      */
     suspend fun getVideoFile(fileId: Int): Result<TdApi.File> =
-        telegramClient.getFile(fileId)
+        suspendCancellableCoroutine { continuation ->
+            telegramClient.client?.send(TdApi.GetFile(fileId)) { result ->
+                when (result) {
+                    is TdApi.File -> continuation.resume(Result.success(result))
+                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
+                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                }
+            } ?: continuation.resume(Result.failure(Exception("Cliente não inicializado")))
+        }
 
     /**
      * Inicia o download de um arquivo para streaming.
@@ -83,7 +93,7 @@ class TelegramRepository @Inject constructor(
     /**
      * Verifica se o usuário está autenticado.
      */
-    fun isAuthorized(): Boolean = telegramClient.isAuthorized()
+    fun isAuthorized(): Boolean = telegramClient.authState.value is AuthState.Authorized
 
     // ---- Funções de conversão (extensões privadas) ----
 
