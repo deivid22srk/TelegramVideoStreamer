@@ -126,7 +126,7 @@ dependencies {
     implementation(libs.gson)
 
     // TDLib - Telegram Database Library (Prebuilt for Android)
-    implementation("ca.denisab85:tdlib:v1.8.8-20221104")
+    implementation("com.github.tdlibx:td:1.8.56")
 
     // Tests
     testImplementation(libs.junit)

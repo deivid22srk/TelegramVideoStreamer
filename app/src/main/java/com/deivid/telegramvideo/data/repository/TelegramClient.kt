@@ -41,6 +41,10 @@ class TelegramClient @Inject constructor(
 ) {
     companion object {
         private const val TAG = "TelegramClient"
+
+        init {
+            System.loadLibrary("tdjni")
+        }
     }
 
     private var API_ID = 0
@@ -157,7 +161,7 @@ class TelegramClient @Inject constructor(
             this.systemLanguageCode = "pt-BR"
             this.deviceModel = android.os.Build.MODEL
             this.applicationVersion = "1.0.0"
-            this.enableStorageOptimizer = true
+            this.systemVersion = android.os.Build.VERSION.RELEASE
         }
 
         _client?.send(parameters) { result ->
@@ -297,7 +301,8 @@ class TelegramClient @Inject constructor(
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
             val filter = TdApi.SearchMessagesFilterVideo()
-            _client?.send(TdApi.SearchChatMessages(chatId, "", null, fromMessageId, 0, limit, filter, 0)) { result ->
+            val request = TdApi.SearchChatMessages(chatId, null, "", null, fromMessageId, 0, limit, filter)
+            _client?.send(request) { result ->
                 when (result) {
                     is TdApi.Messages -> continuation.resume(Result.success(result.messages.toList()))
                     is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
