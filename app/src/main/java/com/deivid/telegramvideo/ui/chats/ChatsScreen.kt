@@ -154,11 +154,23 @@ fun ChatItemRow(chat: ChatItem, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Chat Photo
+        val avatarColor = remember(chat.id) {
+            val colors = listOf(
+                Color(0xFFef5350), Color(0xFFec407a), Color(0xFFab47bc),
+                Color(0xFF7e57c2), Color(0xFF5c6bc0), Color(0xFF42a5f5),
+                Color(0xFF29b6f6), Color(0xFF26c6da), Color(0xFF26a69a),
+                Color(0xFF66bb6a), Color(0xFF9ccc65), Color(0xFFd4e157),
+                Color(0xFFffee58), Color(0xFFffca28), Color(0xFFffa726),
+                Color(0xFFff7043)
+            )
+            colors[(chat.id % colors.size).toInt().let { if (it < 0) it + colors.size else it }]
+        }
+
         Box(
             modifier = Modifier
                 .size(52.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(if (chat.photoPath.isNullOrEmpty()) avatarColor else MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             if (!chat.photoPath.isNullOrEmpty()) {
@@ -171,8 +183,9 @@ fun ChatItemRow(chat: ChatItem, onClick: () -> Unit) {
             } else {
                 Text(
                     text = chat.title.firstOrNull()?.uppercase() ?: "?",
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    style = MaterialTheme.typography.titleMedium
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

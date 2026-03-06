@@ -301,12 +301,26 @@ class TelegramClient @Inject constructor(
     suspend fun getVideos(chatId: Long, fromMessageId: Long = 0, limit: Int = 20): Result<List<TdApi.Message>> =
         suspendCancellableCoroutine { continuation ->
             val filter = TdApi.SearchMessagesFilterVideo()
+            // TdApi.SearchChatMessages(chatId, messageTopic, query, senderId, fromMessageId, offset, limit, filter)
+
             val request = TdApi.SearchChatMessages(chatId, null, "", null, fromMessageId, 0, limit, filter)
+
+            Log.d(TAG, "Searching videos for chat $chatId, fromMessageId $fromMessageId")
+
             _client?.send(request) { result ->
                 when (result) {
-                    is TdApi.Messages -> continuation.resume(Result.success(result.messages.toList()))
-                    is TdApi.Error -> continuation.resume(Result.failure(Exception(result.message)))
-                    else -> continuation.resume(Result.failure(Exception("Resposta inesperada")))
+                    is TdApi.Messages -> {
+                        Log.d(TAG, "Found ${result.messages.size} videos")
+                        continuation.resume(Result.success(result.messages.toList()))
+                    }
+                    is TdApi.Error -> {
+                        Log.e(TAG, "SearchChatMessages error: ${result.message}")
+                        continuation.resume(Result.failure(Exception(result.message)))
+                    }
+                    else -> {
+                        Log.e(TAG, "SearchChatMessages unexpected response: ${result.javaClass.simpleName}")
+                        continuation.resume(Result.failure(Exception("Resposta inesperada: ${result.javaClass.simpleName}")))
+                    }
                 }
             } ?: continuation.resumeWithException(Exception("Cliente não inicializado"))
         }
