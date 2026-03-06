@@ -44,6 +44,11 @@ class LoginViewModel @Inject constructor(
                 when (state) {
                     is AuthState.Authorized -> _uiState.value = LoginUiState.Authorized
                     is AuthState.WaitPassword -> _uiState.value = LoginUiState.PasswordRequired
+                    is AuthState.WaitPhoneNumber -> {
+                        if (_uiState.value !is LoginUiState.Idle) {
+                            _uiState.value = LoginUiState.Idle
+                        }
+                    }
                     is AuthState.Error -> _uiState.value = LoginUiState.Error(state.message)
                     else -> { /* Outros estados tratados pelos métodos abaixo */ }
                 }
@@ -88,16 +93,12 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             val result = repository.checkAuthCode(code.trim())
-            result.fold(
-                onSuccess = {
-                    _uiState.value = LoginUiState.CodeVerified
-                },
-                onFailure = { exception ->
-                    _uiState.value = LoginUiState.Error(
-                        exception.message ?: "Código inválido"
-                    )
-                }
-            )
+            result.onFailure { exception ->
+                _uiState.value = LoginUiState.Error(
+                    exception.message ?: "Código inválido"
+                )
+            }
+            // Não alteramos o estado no sucesso, deixamos o authState.collect cuidar disso
         }
     }
 
@@ -113,16 +114,12 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             val result = repository.checkAuthPassword(password)
-            result.fold(
-                onSuccess = {
-                    _uiState.value = LoginUiState.Authorized
-                },
-                onFailure = { exception ->
-                    _uiState.value = LoginUiState.Error(
-                        exception.message ?: "Senha incorreta"
-                    )
-                }
-            )
+            result.onFailure { exception ->
+                _uiState.value = LoginUiState.Error(
+                    exception.message ?: "Senha incorreta"
+                )
+            }
+            // Não alteramos o estado no sucesso, deixamos o authState.collect cuidar disso
         }
     }
 

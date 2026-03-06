@@ -103,10 +103,24 @@ fun ChatsScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     } else {
-                        LazyColumn {
-                            items(state.chats) { chat ->
-                                ChatItemRow(chat = chat, onClick = { onChatClick(chat.id, chat.title) })
-                                HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(
+                                items = state.chats,
+                                key = { it.id },
+                                contentType = { "chatItem" }
+                            ) { chat ->
+                                ChatItemRow(
+                                    chat = chat,
+                                    onClick = { onChatClick(chat.id, chat.title) }
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 72.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
                             }
                         }
                     }
@@ -126,24 +140,30 @@ fun ChatsScreen(
 
 @Composable
 fun ChatItemRow(chat: ChatItem, onClick: () -> Unit) {
+    val photoPainter = rememberAsyncImagePainter(
+        model = chat.photoPath?.let { File(it) },
+        placeholder = null,
+        error = null
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(vertical = 8.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Chat Photo
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(52.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             if (!chat.photoPath.isNullOrEmpty()) {
                 Image(
-                    painter = rememberAsyncImagePainter(File(chat.photoPath)),
+                    painter = photoPainter,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
