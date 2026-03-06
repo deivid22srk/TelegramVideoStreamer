@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -19,7 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Telegram API credentials - substitua pelos seus valores obtidos em https://my.telegram.org
-        buildConfigField("int", "TELEGRAM_API_ID", "\"YOUR_API_ID\"")
+        buildConfigField("int", "TELEGRAM_API_ID", "0")
         buildConfigField("String", "TELEGRAM_API_HASH", "\"YOUR_API_HASH\"")
     }
 
@@ -50,6 +51,11 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
 
     packaging {
@@ -60,6 +66,21 @@ android {
 }
 
 dependencies {
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -90,6 +111,9 @@ dependencies {
     implementation(libs.media3.datasource)
     implementation(libs.media3.hls)
 
+    // Coil para Compose
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     // Glide para carregamento de imagens
     implementation(libs.glide)
     kapt(libs.glide.compiler)
@@ -102,7 +126,7 @@ dependencies {
     implementation(libs.gson)
 
     // TDLib - Telegram Database Library (Prebuilt for Android)
-    implementation("ca.denisab85:tdlib:v1.8.8-20221104")
+    implementation("com.github.tdlibx:td:1.8.56")
 
     // Tests
     testImplementation(libs.junit)
